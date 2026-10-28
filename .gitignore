@@ -1,0 +1,20 @@
+# Бинарники и временные файлы Air
+/tmp/
+build-errors.log
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Конфигурация и окружение
+.env
+
+# Тестовые артефакты
+coverage.out
+
+# IDE
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
