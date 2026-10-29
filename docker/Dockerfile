@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1
 
 # -------------------------------------------------------------
-# Base: актуальная версия Go на Alpine
+# Base: current version of Go on Alpine
 # -------------------------------------------------------------
-FROM golang:1.26-alpine AS base
+FROM golang:1.26.10-alpine AS base
 
 WORKDIR /app
 
@@ -16,17 +16,20 @@ RUN apk add --no-cache \
     tzdata
 
 # -------------------------------------------------------------
-# Local: инструменты разработки под devcontainer
+# Local: development tools for devcontainers
 # -------------------------------------------------------------
 FROM base AS local
 
-# Установка актуальных стабильных утилит
+RUN apk add --no-cache gcc musl-dev
+
+ENV CGO_ENABLED=1
+
+COPY --from=golangci/golangci-lint:v2.10.1-alpine /usr/bin/golangci-lint /usr/local/bin/golangci-lint
+
 RUN go install github.com/air-verse/air@v1.67.4 && \
     go install -tags 'mysql' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18.2 && \
-    go install github.com/swaggo/swag/cmd/swag@v1.16.4 && \
-    go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.5
+    go install github.com/swaggo/swag/cmd/swag@v1.16.4
 
-# Непривилегированный пользователь
 ARG UID=1001
 ARG GID=1001
 RUN addgroup -g ${GID} appgroup && \
@@ -41,11 +44,11 @@ EXPOSE 8080
 CMD ["tail", "-f", "/dev/null"]
 
 # -------------------------------------------------------------
-# Builder: сборка бинарника
+# Builder: building the binary
 # -------------------------------------------------------------
 FROM base AS builder
 
-COPY go.mod go.sum ./
+COPY go.* ./
 RUN go mod download
 
 COPY . .
@@ -53,10 +56,10 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build \
     -trimpath \
     -ldflags="-s -w" \
-    -o /bin/api cmd/api/main.go
+    -o /bin/api ./cmd/task-tracker
 
 # -------------------------------------------------------------
-# Prod: минимальный runtime
+# Prod: minimal runtime
 # -------------------------------------------------------------
 FROM alpine:3.22 AS prod
 
@@ -66,6 +69,7 @@ RUN apk add --no-cache ca-certificates tzdata && \
 WORKDIR /app
 
 COPY --from=builder /bin/api /app/api
+COPY --from=builder /app/configs/config.yaml /app/configs/config.yaml
 
 USER appuser
 

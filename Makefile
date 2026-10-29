@@ -1,4 +1,4 @@
-include .env
+-include .env
 export
 
 .PHONY: help up down restart logs-app build test lint migrate-create migrate-up migrate-down swag
@@ -36,4 +36,4 @@ migrate-down: ## Откатить последнюю миграцию
 	migrate -path migrations -database "mysql://$(DB_USER):$(DB_PASSWORD)@tcp($(DB_HOST):$(DB_PORT))/$(DB_NAME)" down 1
 
 swag: ## Сгенерировать документацию Swagger/OpenAPI
-	swag init -g cmd/api/main.go -o api/openapi
+	swag init -g cmd/task-tracker/main.go -o api/openapi
