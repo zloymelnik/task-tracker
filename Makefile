@@ -4,7 +4,7 @@ export
 .PHONY: help up down restart logs-app build test lint migrate-create migrate-up migrate-down swag
 
 help: ## Показать список доступных команд
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-18s\033[0m %s\n", $$1, $$2}'
+	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-18s\033[0m %s\n", $$1, $$2}'
 
 up: ## Запустить все сервисы (app, mysql, redis)
 	docker compose up -d

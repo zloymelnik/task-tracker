@@ -12,6 +12,22 @@ jobs:
     name: Go checks
     runs-on: ubuntu-latest
 
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root-password
+          MYSQL_DATABASE: task_tracker_test
+          MYSQL_USER: app
+          MYSQL_PASSWORD: ci-password
+        ports:
+          - 3306/tcp
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -u root -pci-root-password --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -38,7 +54,9 @@ jobs:
         run: go build ./...
 
       - name: Test
-        run: go test -race -coverprofile=coverage.out ./...
+        env:
+          MYSQL_TEST_DSN: app:ci-password@tcp(127.0.0.1:${{ job.services.mysql.ports['3306'] }})/task_tracker_test
+        run: go test -race -count=1 -coverprofile=coverage.out ./...
 
       - name: Lint
         uses: golangci/golangci-lint-action@v9
