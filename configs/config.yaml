@@ -3,3 +3,20 @@ server:
   read_timeout: 5s
   write_timeout: 10s
   shutdown_timeout: 15s
+
+mysql:
+  host: mysql
+  port: 3306
+  name: team_tasks
+  user: app
+  max_request_time: 5s
+  pool:
+    max_open_conns: 10
+    max_idle_conns: 5
+    conn_max_lifetime: 30m
+  retry:
+    max_attempts: 10
+    delay: 2s
+
+auth:
+  jwt_ttl: 5m
