@@ -23,6 +23,7 @@ func main() {
 	if err != nil {
 		panic(err.Error())
 	}
+
 	//Inits logger
 	logger, err := logger.GetLogger(config.Env)
 	if err != nil {
@@ -31,18 +32,17 @@ func main() {
 	logger.Info("Start service: init logger complete")
 
 	//Inints app
-	a, err := app.NewApp(config, logger)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	a, err := app.NewApp(ctx, config, logger)
 	if err != nil {
-		logger.Error("Error init app", "error", err.Error())
+		logger.Error("Error init app", "error", err)
 		os.Exit(1)
 	}
 	logger.Info("Start service: init app complete")
 
 	//Runs app
 	serverErr := make(chan error, 1)
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-
 	go func() {
 		logger.Info("Server starting", "address", config.Server.Address())
 		if err := a.Run(); !errors.Is(err, http.ErrServerClosed) {
@@ -52,15 +52,16 @@ func main() {
 
 	exitCode := 0
 	select {
-	case sig := <-quit:
-		logger.Info("Signal received, shutting down", "signal", sig)
+	case <-ctx.Done():
+		logger.Info("Shutdown requested", "reason", ctx.Err())
 	case err := <-serverErr:
 		logger.Error("Server error", "err", err)
 		exitCode = 1
 	}
+	stop()
 
-	ctx, cancel := context.WithTimeout(context.Background(), config.Server.ShutdownTimeout)
-	if err := a.Shutdown(ctx); err != nil {
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), config.Server.ShutdownTimeout)
+	if err := a.Shutdown(shutdownCtx); err != nil {
 		cancel()
 		logger.Error("Graceful shutdown failed", "err", err)
 		exitCode = 1
@@ -68,6 +69,5 @@ func main() {
 	cancel()
 
 	logger.Info("Server stopped")
-	signal.Stop(quit)
 	os.Exit(exitCode)
 }
