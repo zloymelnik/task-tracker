@@ -28,7 +28,8 @@ func (u *UserRepository) Save(ctx context.Context, user *domain.User) error {
 	u.log.Debug("MySQL: User: Save user data", "email", user.Email, "name", user.Name, "id", user.ID)
 	ctx, cancel := context.WithTimeout(ctx, u.timeout)
 	defer cancel()
-	_, err := u.db.ExecContext(ctx,
+	executor := getExecutor(ctx, u.db)
+	_, err := executor.ExecContext(ctx,
 		"INSERT INTO users (id, email, name, password_hash, created_at) VALUES (?, ?, ?, ?, ?)",
 		uuidToBytes(user.ID), user.Email, user.Name, user.PasswordHash, user.CreatedAt,
 	)
@@ -69,8 +70,9 @@ func (u *UserRepository) GetByEmail(ctx context.Context, email string) (*domain.
 	u.log.Debug("MySQL: User: Get by email", "email", email)
 	ctx, cancel := context.WithTimeout(ctx, u.timeout)
 	defer cancel()
+	executor := getExecutor(ctx, u.db)
 	var raw rawUser
-	err := u.db.GetContext(ctx, &raw, `SELECT id, email, name, password_hash, created_at FROM users WHERE email = ? LIMIT 1`, email)
+	err := executor.GetContext(ctx, &raw, `SELECT id, email, name, password_hash, created_at FROM users WHERE email = ? LIMIT 1`, email)
 	if err != nil {
 		if isErrUserNotFound(err) {
 			return nil, domain.ErrUserNotFound

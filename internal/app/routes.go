@@ -10,21 +10,22 @@ import (
 )
 
 func NewRouter(h *handler.Handler, parser handler.TokenParser, log *slog.Logger) http.Handler {
-	//TODO: добавить нормальные middleware
 	r := chi.NewRouter()
-	r.Use(middleware.RequestID)
-	r.Use(handler.Logger(log))
-	r.Use(handler.Recovery(log))
-	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		h.Health.Health(w, r)
-	})
-	r.Route("/auth", func(r chi.Router) {
+	r.Route("/api/v1", func(r chi.Router) {
+		r.Use(middleware.RequestID)
+		r.Use(handler.Logger(log))
+		r.Use(handler.Recovery(log))
+		r.Get("/health", h.Health.Health)
 		r.Post("/register", h.Auth.Register)
 		r.Post("/login", h.Auth.Login)
+		r.Group(func(r chi.Router) {
+			r.Use(handler.AuthMiddleware(parser, log))
+			r.Post("/teams", h.Team.Create)
+			r.Get("/teams", h.Team.List)
+			r.Post("/teams/{id}/invite", h.Team.AddMember)
+			r.Patch("/teams/{id}/members/{user_id}/role", h.Team.UpdateRole)
+		})
 	})
-	r.Group(func(r chi.Router) {
-		r.Use(handler.AuthMiddleware(parser, log))
-		// Register protected team and task routes here.
-	})
+
 	return r
 }

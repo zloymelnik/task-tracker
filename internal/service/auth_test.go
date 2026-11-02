@@ -84,7 +84,7 @@ func TestRegister(t *testing.T) {
 				saved = *user
 				return nil
 			}}
-			auth := service.NewAuth(config.Auth{}, repo, testLogger())
+			auth := service.NewAuthService(config.Auth{}, repo, testLogger())
 			before := time.Now().UTC().Truncate(time.Millisecond)
 			got, err := auth.Register(ctx, tt.input)
 			after := time.Now().UTC()
@@ -140,7 +140,7 @@ func TestRegisterInvalidInput(t *testing.T) {
 				t.Fatal("Save must not be called for invalid input")
 				return nil
 			}}
-			got, err := service.NewAuth(config.Auth{}, repo, testLogger()).Register(context.Background(), tt.input)
+			got, err := service.NewAuthService(config.Auth{}, repo, testLogger()).Register(context.Background(), tt.input)
 			if !errors.Is(err, domain.ErrInvalidInput) {
 				t.Errorf("Register() error = %v, want ErrInvalidInput", err)
 			}
@@ -160,7 +160,7 @@ func TestRegisterRepositoryErrors(t *testing.T) {
 				calls++
 				return fmt.Errorf("save user: %w", want)
 			}}
-			got, err := service.NewAuth(config.Auth{}, repo, testLogger()).Register(context.Background(), validRegisterInput())
+			got, err := service.NewAuthService(config.Auth{}, repo, testLogger()).Register(context.Background(), validRegisterInput())
 			if !errors.Is(err, want) {
 				t.Errorf("Register() error = %v, want wrapping %v", err, want)
 			}
@@ -177,7 +177,7 @@ func TestRegisterCanceledContext(t *testing.T) {
 	repo := userRepositoryStub{save: func(ctx context.Context, _ *domain.User) error {
 		return ctx.Err()
 	}}
-	got, err := service.NewAuth(config.Auth{}, repo, testLogger()).Register(ctx, validRegisterInput())
+	got, err := service.NewAuthService(config.Auth{}, repo, testLogger()).Register(ctx, validRegisterInput())
 	if !errors.Is(err, context.Canceled) {
 		t.Errorf("Register() error = %v, want context.Canceled", err)
 	}
@@ -200,7 +200,7 @@ func TestLogin(t *testing.T) {
 		}
 		return &user, nil
 	}}
-	auth := service.NewAuth(cfg, repo, testLogger())
+	auth := service.NewAuthService(cfg, repo, testLogger())
 	before := time.Now().Truncate(time.Second)
 	signed, err := auth.Login(ctx, service.LoginInput{Email: " \tUser@Example.COM\n", Password: password})
 	after := time.Now().Truncate(time.Second)
@@ -245,7 +245,7 @@ func TestLoginInvalidInput(t *testing.T) {
 	} {
 		t.Run(fmt.Sprintf("email=%q/password bytes=%d", input.Email, len(input.Password)), func(t *testing.T) {
 			// An unexpected repository call panics in the stub.
-			auth := service.NewAuth(testAuthConfig(), userRepositoryStub{}, testLogger())
+			auth := service.NewAuthService(testAuthConfig(), userRepositoryStub{}, testLogger())
 			token, err := auth.Login(context.Background(), input)
 			if token != "" || !errors.Is(err, domain.ErrInvalidInput) {
 				t.Errorf("Login() token empty=%v error=%v, want empty and ErrInvalidInput", token == "", err)
@@ -290,7 +290,7 @@ func TestLoginErrors(t *testing.T) {
 				}
 				return &domain.User{ID: uuid.New(), PasswordHash: tt.hash}, nil
 			}}
-			token, err := service.NewAuth(testAuthConfig(), repo, testLogger()).Login(ctx,
+			token, err := service.NewAuthService(testAuthConfig(), repo, testLogger()).Login(ctx,
 				service.LoginInput{Email: "user@example.com", Password: "password"})
 			if token != "" || !errors.Is(err, tt.want) || calls != 1 {
 				t.Errorf("Login() token empty=%v error=%v calls=%d, want empty, %v and 1", token == "", err, calls, tt.want)
@@ -321,7 +321,7 @@ func TestParseToken(t *testing.T) {
 		{"invalid UUID", jwt.SigningMethodHS256, cfg.JWTSecret, jwt.MapClaims{"sub": "not-a-uuid", "exp": now + 3600}, true},
 		{"invalid sub type", jwt.SigningMethodHS256, cfg.JWTSecret, jwt.MapClaims{"sub": 123, "exp": now + 3600}, true},
 	}
-	auth := service.NewAuth(cfg, userRepositoryStub{}, testLogger())
+	auth := service.NewAuthService(cfg, userRepositoryStub{}, testLogger())
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			signed, err := jwt.NewWithClaims(tt.method, tt.claims).SignedString([]byte(tt.key))
