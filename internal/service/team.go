@@ -11,10 +11,6 @@ import (
 	"github.com/zloymelnik/task-tracker/internal/domain"
 )
 
-type TransactionManager interface {
-	Do(ctx context.Context, fn func(context.Context) error) error
-}
-
 type TeamRepository interface {
 	Save(ctx context.Context, team *domain.Team) error
 	ListByUserID(ctx context.Context, userID uuid.UUID) ([]domain.Team, error)

@@ -24,6 +24,8 @@ func NewRouter(h *handler.Handler, parser handler.TokenParser, log *slog.Logger)
 			r.Get("/teams", h.Team.List)
 			r.Post("/teams/{id}/invite", h.Team.AddMember)
 			r.Patch("/teams/{id}/members/{user_id}/role", h.Team.UpdateRole)
+
+			r.Post("/tasks", h.Task.Create)
 		})
 	})
 

@@ -10,6 +10,7 @@ type Handler struct {
 	Health *HealthHandler
 	Auth   *AuthHandler
 	Team   *TeamHandler
+	Task   *TaskHandler
 }
 
 func New(service *service.Service, log *slog.Logger) *Handler {
@@ -17,5 +18,6 @@ func New(service *service.Service, log *slog.Logger) *Handler {
 		Health: NewHealthHandler(log),
 		Auth:   NewAuthHandler(service.Auth, log),
 		Team:   NewTeamHandler(service.Team, log),
+		Task:   NewTaskHandler(service.Task, log),
 	}
 }

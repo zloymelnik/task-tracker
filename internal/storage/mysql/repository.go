@@ -5,25 +5,9 @@ import (
 	"database/sql"
 	"log/slog"
 
-	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/zloymelnik/task-tracker/internal/config"
-	"github.com/zloymelnik/task-tracker/internal/domain"
 )
-
-type User interface {
-	Save(ctx context.Context, user *domain.User) error
-	GetByEmail(ctx context.Context, email string) (*domain.User, error)
-}
-
-type Team interface {
-	Save(ctx context.Context, team *domain.Team) error
-	ListByUserID(ctx context.Context, userID uuid.UUID) ([]domain.Team, error)
-}
-
-type TeamMember interface {
-	Save(ctx context.Context, team *domain.TeamMember) error
-}
 
 type TxManager struct {
 	db *sqlx.DB
@@ -34,6 +18,8 @@ type Repository struct {
 	Team         *TeamRepository
 	TeamMember   *TeamMemberRepository
 	Transactions *TxManager
+	Task         *TaskRepository
+	TaskHistory  *TaskHistoryRepository
 }
 
 type Executor interface {
@@ -62,5 +48,7 @@ func NewRepository(cfg config.DB, db *sqlx.DB, log *slog.Logger) *Repository {
 		Team:         NewTeamRepository(db, log, cfg.MaxRequestTime),
 		TeamMember:   NewTeamMemberRepository(db, log, cfg.MaxRequestTime),
 		Transactions: NewTxManager(db),
+		Task:         NewTaskRepository(db, log, cfg.MaxRequestTime),
+		TaskHistory:  NewTaskHistoryRepository(db, log, cfg.MaxRequestTime),
 	}
 }
