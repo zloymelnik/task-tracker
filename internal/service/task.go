@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,6 +25,11 @@ type TaskHistoryRepository interface {
 	List(ctx context.Context, filter domain.TaskHistoryFilter) ([]domain.TaskHistory, int, error)
 }
 
+type TaskCommentRepository interface {
+	Save(ctx context.Context, comment *domain.TaskComment) error
+	List(ctx context.Context, filter domain.TaskCommentFilter) ([]domain.TaskComment, int, error)
+}
+
 type TeamMemberRepo interface {
 	GetByTeamAndUserIDForUpdate(ctx context.Context, teamID uuid.UUID, userID uuid.UUID) (*domain.TeamMember, error)
 	GetByTeamAndUserID(ctx context.Context, teamID, userID uuid.UUID) (*domain.TeamMember, error)
@@ -33,15 +39,17 @@ type TaskService struct {
 	tx  TransactionManager
 	tr  TaskRepository
 	thr TaskHistoryRepository
+	tcr TaskCommentRepository
 	tmr TeamMemberRepo
 	log *slog.Logger
 }
 
-func NewTaskService(tx TransactionManager, tr TaskRepository, thr TaskHistoryRepository, tmr TeamMemberRepo, log *slog.Logger) *TaskService {
+func NewTaskService(tx TransactionManager, tr TaskRepository, thr TaskHistoryRepository, tcr TaskCommentRepository, tmr TeamMemberRepo, log *slog.Logger) *TaskService {
 	return &TaskService{
 		tx:  tx,
 		tr:  tr,
 		thr: thr,
+		tcr: tcr,
 		tmr: tmr,
 		log: log,
 	}
@@ -169,10 +177,10 @@ func (s *TaskService) List(
 		}
 	}
 	if err := validateLimit(filter.Limit); err != nil {
-		return nil, 0, fmt.Errorf("get task list: %w:", err)
+		return nil, 0, fmt.Errorf("get task list: %w", err)
 	}
 	if err := validateOffset(filter.Offset); err != nil {
-		return nil, 0, fmt.Errorf("get task list: %w:", err)
+		return nil, 0, fmt.Errorf("get task list: %w", err)
 	}
 	actor, err := s.tmr.GetByTeamAndUserID(ctx, *filter.TeamID, actorID)
 	if err != nil {
@@ -422,4 +430,100 @@ func (s *TaskService) History(
 	}
 	s.log.Debug("Task History: get list of history sucessfully", "filter", filter, "total", total)
 	return history, total, nil
+}
+
+type CreateTaskCommentInput struct {
+	Body string
+}
+
+func (s *TaskService) AddComment(
+	ctx context.Context,
+	actorID, taskID uuid.UUID,
+	input CreateTaskCommentInput,
+) (*domain.TaskComment, error) {
+	if actorID == uuid.Nil {
+		return nil, fmt.Errorf("create comment: %w: actor_id must not be nil", domain.ErrInvalidInput)
+	}
+	if taskID == uuid.Nil {
+		return nil, fmt.Errorf("create comment: %w: task_id must not be nil", domain.ErrInvalidInput)
+	}
+	if strings.TrimSpace(input.Body) == "" {
+		return nil, fmt.Errorf("create comment: %w: body must not be empty", domain.ErrInvalidInput)
+	}
+	if err := validateDescription(input.Body); err != nil {
+		return nil, fmt.Errorf("create comment: %w", err)
+	}
+	s.log.Debug("Task: create a new comment", "actorID", actorID, "taskID", taskID, "body", input)
+	var comment *domain.TaskComment
+	err := s.tx.Do(ctx, func(txCtx context.Context) error {
+		task, err := s.tr.GetByID(txCtx, taskID)
+		if err != nil {
+			return fmt.Errorf("create task comment: %w", err)
+		}
+		actor, err := s.tmr.GetByTeamAndUserIDForUpdate(txCtx, task.TeamID, actorID)
+		if err != nil {
+			if errors.Is(err, domain.ErrTeamMemberNotFound) {
+				return domain.ErrForbidden
+			}
+			return fmt.Errorf("create task comment: get actor membership: %w", err)
+		}
+		if err := validateRole(actor.Role); err != nil {
+			return fmt.Errorf("create task comment: %w", err)
+		}
+		comment = &domain.TaskComment{
+			ID:        uuid.New(),
+			TaskID:    taskID,
+			CreatedBy: actorID,
+			CreatedAt: time.Now().UTC().Truncate(time.Millisecond),
+			Body:      input.Body,
+		}
+		if err := s.tcr.Save(txCtx, comment); err != nil {
+			return fmt.Errorf("create task comment: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create task comment: %w", err)
+	}
+	s.log.Debug("Task: create a new task comment successfully", "comment", comment)
+	return comment, nil
+}
+
+func (s *TaskService) Comments(
+	ctx context.Context,
+	actorID uuid.UUID,
+	filter domain.TaskCommentFilter,
+) ([]domain.TaskComment, int, error) {
+	if actorID == uuid.Nil {
+		return nil, 0, fmt.Errorf("get comments: %w: actor_id must not be nil", domain.ErrInvalidInput)
+	}
+	if err := validateLimit(filter.Limit); err != nil {
+		return nil, 0, fmt.Errorf("get comments: %w", err)
+	}
+	if err := validateOffset(filter.Offset); err != nil {
+		return nil, 0, fmt.Errorf("get comments: %w", err)
+	}
+	if filter.TaskID == nil || *filter.TaskID == uuid.Nil {
+		return nil, 0, fmt.Errorf("get comments: %w: task_id must not be nil", domain.ErrInvalidInput)
+	}
+	task, err := s.tr.GetByID(ctx, *filter.TaskID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("get comments: %w", err)
+	}
+	actor, err := s.tmr.GetByTeamAndUserID(ctx, task.TeamID, actorID)
+	if err != nil {
+		if errors.Is(err, domain.ErrTeamMemberNotFound) {
+			return nil, 0, fmt.Errorf("get comments: %w", domain.ErrForbidden)
+		}
+		return nil, 0, fmt.Errorf("get comments: %w", err)
+	}
+	if err := validateRole(actor.Role); err != nil {
+		return nil, 0, fmt.Errorf("get comments: %w", err)
+	}
+	comments, total, err := s.tcr.List(ctx, filter)
+	if err != nil {
+		return nil, 0, fmt.Errorf("get comments: %w: request error", err)
+	}
+	s.log.Debug("Task Comment: get list of comments sucessfully", "filter", filter, "total", total)
+	return comments, total, nil
 }

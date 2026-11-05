@@ -99,7 +99,7 @@ func (t *TeamService) List(ctx context.Context, actorID uuid.UUID, filter domain
 		return nil, 0, fmt.Errorf("get team list: %w", err)
 	}
 	if err := validateOffset(filter.Offset); err != nil {
-		return nil, 0, fmt.Errorf("get team list: %w:", err)
+		return nil, 0, fmt.Errorf("get team list: %w", err)
 	}
 	filter.UserID = &actorID
 

@@ -22,6 +22,6 @@ func NewService(cfg *config.Config, repository *mysql.Repository, log *slog.Logg
 	return &Service{
 		Auth: NewAuthService(cfg.Auth, repository.User, log),
 		Team: NewTeamService(repository.Transactions, repository.Team, repository.TeamMember, repository.User, log),
-		Task: NewTaskService(repository.Transactions, repository.Task, repository.TaskHistory, repository.TeamMember, log),
+		Task: NewTaskService(repository.Transactions, repository.Task, repository.TaskHistory, repository.TaskComment, repository.TeamMember, log),
 	}
 }

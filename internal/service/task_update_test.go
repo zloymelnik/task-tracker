@@ -164,7 +164,7 @@ func TestUpdateTaskChanges(t *testing.T) {
 				return nil
 			})
 			before := time.Now().UTC().Truncate(time.Millisecond)
-			got, err := service.NewTaskService(tx, repo, hr, members, testLogger()).Update(ctx, old.CreatedBy, old.ID, input)
+			got, err := service.NewTaskService(tx, repo, hr, nil, members, testLogger()).Update(ctx, old.CreatedBy, old.ID, input)
 			if err != nil || got == nil {
 				t.Fatalf("Update()=(%v,%v)", got, err)
 			}
@@ -243,7 +243,7 @@ func TestUpdateTaskPermissions(t *testing.T) {
 					})
 					hr := taskHistoryRepositoryFunc(func(context.Context, *domain.TaskHistory) error { writes++; return nil })
 					tx := transactionManagerFunc(func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) })
-					got, err := service.NewTaskService(tx, repo, hr, members, testLogger()).Update(context.Background(), actor, old.ID, input)
+					got, err := service.NewTaskService(tx, repo, hr, nil, members, testLogger()).Update(context.Background(), actor, old.ID, input)
 					allowed := identity == "author" || (identity == "assignee" && field == "status")
 					if allowed {
 						if err != nil || got == nil || writes != 2 {
@@ -273,7 +273,7 @@ func TestUpdateTaskInvalidInput(t *testing.T) {
 			case "max version":
 				input.Version = math.MaxUint32
 			}
-			got, err := service.NewTaskService(nil, nil, nil, nil, testLogger()).Update(context.Background(), actor, task, input)
+			got, err := service.NewTaskService(nil, nil, nil, nil, nil, testLogger()).Update(context.Background(), actor, task, input)
 			if got != nil || !errors.Is(err, domain.ErrInvalidInput) {
 				t.Errorf("Update()=(%v,%v), want invalid input", got, err)
 			}
@@ -393,7 +393,7 @@ func TestUpdateTaskErrors(t *testing.T) {
 				}
 				return nil
 			})
-			got, err := service.NewTaskService(tx, repo, hr, members, testLogger()).Update(ctx, old.CreatedBy, old.ID, input)
+			got, err := service.NewTaskService(tx, repo, hr, nil, members, testLogger()).Update(ctx, old.CreatedBy, old.ID, input)
 			if got != nil || !errors.Is(err, want) {
 				t.Errorf("Update()=(%v,%v), want nil/%v", got, err, want)
 			}

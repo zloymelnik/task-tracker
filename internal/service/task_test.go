@@ -115,7 +115,7 @@ func TestCreateTask(t *testing.T) {
 					return nil
 				})
 				before := time.Now().UTC().Truncate(time.Millisecond)
-				got, err := service.NewTaskService(tx, tasks, history, members, testLogger()).Create(ctx, actor, input)
+				got, err := service.NewTaskService(tx, tasks, history, nil, members, testLogger()).Create(ctx, actor, input)
 				after := time.Now().UTC()
 				if err != nil || got == nil {
 					t.Fatalf("Create()=(%v,%v), want task", got, err)
@@ -203,7 +203,7 @@ func TestCreateTaskInvalidInput(t *testing.T) {
 				t.Fatal("invalid input must not start transaction")
 				return nil
 			})
-			got, err := service.NewTaskService(tx, nil, nil, nil, testLogger()).Create(context.Background(), actor, input)
+			got, err := service.NewTaskService(tx, nil, nil, nil, nil, testLogger()).Create(context.Background(), actor, input)
 			if got != nil || !errors.Is(err, domain.ErrInvalidInput) {
 				t.Errorf("Create()=(%v,%v), want invalid input", got, err)
 			}
@@ -220,7 +220,7 @@ func TestCreateTaskTextBoundaries(t *testing.T) {
 			})
 			tasks := taskRepositoryFunc(func(context.Context, *domain.Task) error { return nil })
 			history := taskHistoryRepositoryFunc(func(context.Context, *domain.TaskHistory) error { return nil })
-			got, err := service.NewTaskService(tx, tasks, history, members, testLogger()).Create(context.Background(), uuid.New(), service.CreateTaskInput{TeamID: uuid.New(), Title: strings.Repeat("я", 255), Description: description})
+			got, err := service.NewTaskService(tx, tasks, history, nil, members, testLogger()).Create(context.Background(), uuid.New(), service.CreateTaskInput{TeamID: uuid.New(), Title: strings.Repeat("я", 255), Description: description})
 			if err != nil || got == nil || got.Description != description {
 				t.Errorf("boundary input rejected: %v", err)
 			}
@@ -304,7 +304,7 @@ func TestCreateTaskErrors(t *testing.T) {
 				}
 				return nil
 			})
-			got, err := service.NewTaskService(tx, tasks, history, members, testLogger()).Create(ctx, actor, service.CreateTaskInput{TeamID: team, Title: "Task", AssigneeID: &assignee})
+			got, err := service.NewTaskService(tx, tasks, history, nil, members, testLogger()).Create(ctx, actor, service.CreateTaskInput{TeamID: team, Title: "Task", AssigneeID: &assignee})
 			if got != nil || !errors.Is(err, tt.want) || steps != tt.steps {
 				t.Errorf("Create()=(%v,%v) steps=%d, want nil/%v/%d", got, err, steps, tt.want, tt.steps)
 			}

@@ -67,7 +67,7 @@ func TestListTasks(t *testing.T) {
 					}
 					return want, 41, nil
 				})
-				got, total, err := service.NewTaskService(nil, repo, nil, members, testLogger()).List(ctx, actor, filter)
+				got, total, err := service.NewTaskService(nil, repo, nil, nil, members, testLogger()).List(ctx, actor, filter)
 				if err != nil || total != 41 || !reflect.DeepEqual(got, want) || !reflect.DeepEqual(calls, []string{"membership", "list"}) {
 					t.Errorf("List()=(%v,%d,%v), calls=%v", got, total, err, calls)
 				}
@@ -106,7 +106,7 @@ func TestListTasksInvalidInput(t *testing.T) {
 				filter.Offset = -1
 			}
 			// Nil dependencies prove validation happens before any storage call.
-			got, total, err := service.NewTaskService(nil, nil, nil, nil, testLogger()).List(context.Background(), actor, filter)
+			got, total, err := service.NewTaskService(nil, nil, nil, nil, nil, testLogger()).List(context.Background(), actor, filter)
 			if got != nil || total != 0 || !errors.Is(err, domain.ErrInvalidInput) {
 				t.Errorf("List()=(%v,%d,%v), want invalid input", got, total, err)
 			}
@@ -124,7 +124,7 @@ func TestListTasksEmptyPages(t *testing.T) {
 			repo := listTaskRepositoryFunc(func(context.Context, domain.TaskFilter) ([]domain.Task, int, error) {
 				return []domain.Task{}, 12, nil
 			})
-			got, total, err := service.NewTaskService(nil, repo, nil, members, testLogger()).List(context.Background(), uuid.New(), domain.TaskFilter{TeamID: &team, Limit: limit, Offset: 1000})
+			got, total, err := service.NewTaskService(nil, repo, nil, nil, members, testLogger()).List(context.Background(), uuid.New(), domain.TaskFilter{TeamID: &team, Limit: limit, Offset: 1000})
 			if err != nil || got == nil || len(got) != 0 || total != 12 {
 				t.Errorf("List()=(%v,%d,%v), want empty page with total 12", got, total, err)
 			}
@@ -170,7 +170,7 @@ func TestListTasksErrors(t *testing.T) {
 			case "canceled":
 				want = context.Canceled
 			}
-			got, total, err := service.NewTaskService(nil, repo, nil, members, testLogger()).List(ctx, uuid.New(), domain.TaskFilter{TeamID: &team, Limit: 20})
+			got, total, err := service.NewTaskService(nil, repo, nil, nil, members, testLogger()).List(ctx, uuid.New(), domain.TaskFilter{TeamID: &team, Limit: 20})
 			if got != nil || total != 0 || !errors.Is(err, want) || membershipCalls != 1 || listCalls != wantListCalls {
 				t.Errorf("List()=(%v,%d,%v), membership/list calls=%d/%d, want nil/0/%v and 1/%d", got, total, err, membershipCalls, listCalls, want, wantListCalls)
 			}

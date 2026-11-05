@@ -153,7 +153,7 @@ func TestUpdateTaskTransaction(t *testing.T) {
 			if rollback {
 				history = failAfterTaskHistorySave{repo: repos.TaskHistory, err: failure}
 			}
-			svc := service.NewTaskService(repos.Transactions, repos.Task, history, repos.TeamMember, log)
+			svc := service.NewTaskService(repos.Transactions, repos.Task, history, nil, repos.TeamMember, log)
 			title, status := "Changed", domain.Done
 			got, err := svc.Update(ctx, actor.ID, old.ID, service.UpdateTaskInput{Version: 1, Title: &title, Status: &status, AssigneeSet: true, AssigneeID: &assignee.ID})
 			stored, readErr := repos.Task.GetByID(ctx, old.ID)
@@ -238,7 +238,7 @@ func TestConcurrentTaskUpdates(t *testing.T) {
 	defer cancel()
 	ready, release := make(chan struct{}, 2), make(chan struct{})
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	svc := service.NewTaskService(repos.Transactions, synchronizedTaskReads{repos.Task, ready, release}, repos.TaskHistory, repos.TeamMember, log)
+	svc := service.NewTaskService(repos.Transactions, synchronizedTaskReads{repos.Task, ready, release}, repos.TaskHistory, nil, repos.TeamMember, log)
 	type result struct {
 		task *domain.Task
 		err  error

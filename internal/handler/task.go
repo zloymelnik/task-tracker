@@ -18,6 +18,8 @@ type TaskService interface {
 	List(ctx context.Context, actorID uuid.UUID, filter domain.TaskFilter) ([]domain.Task, int, error)
 	Update(ctx context.Context, actorID, taskID uuid.UUID, input service.UpdateTaskInput) (*domain.Task, error)
 	History(ctx context.Context, actorID uuid.UUID, filter domain.TaskHistoryFilter) ([]domain.TaskHistory, int, error)
+	AddComment(ctx context.Context, actorID, taskID uuid.UUID, input service.CreateTaskCommentInput) (*domain.TaskComment, error)
+	Comments(ctx context.Context, actorID uuid.UUID, filter domain.TaskCommentFilter) ([]domain.TaskComment, int, error)
 }
 
 type TaskHandler struct {
@@ -180,7 +182,7 @@ func (h *TaskHandler) History(w http.ResponseWriter, r *http.Request) {
 	userID, ok := UserIDFromContext(r.Context())
 	if !ok {
 		if err := writeErrorResponse(w, http.StatusUnauthorized, "Unauthorized"); err != nil {
-			h.log.Error("Failed to write create task response", "error", err)
+			h.log.Error("Failed to write history of task response", "error", err)
 		}
 		return
 	}
@@ -228,4 +230,94 @@ func (h *TaskHandler) History(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.log.Info("Gets task history successfully", "total", total, "filter", filter)
+}
+
+func (h *TaskHandler) AddComment(w http.ResponseWriter, r *http.Request) {
+	userID, ok := UserIDFromContext(r.Context())
+	if !ok {
+		if err := writeErrorResponse(w, http.StatusUnauthorized, "Unauthorized"); err != nil {
+			h.log.Error("Failed to write create task comment response", "error", err)
+		}
+		return
+	}
+	taskID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		respondError(w, domain.ErrInvalidInput, h.log)
+		return
+	}
+	var rawComment CreateTaskCommentRequest
+	if err := decodeJSON(w, r, &rawComment); err != nil {
+		respondError(w, err, h.log)
+		return
+	}
+	commentInput := rawComment.ToInput()
+	h.log.Info("Create task comment", "taskID", taskID, "userID", userID, "comment", commentInput)
+	comment, err := h.s.AddComment(r.Context(), userID, taskID, commentInput)
+	if err != nil {
+		respondError(w, err, h.log)
+		return
+	}
+	if err := writeJSON(w, http.StatusCreated, NewCreateTaskCommentResponse(*comment)); err != nil {
+		if errors.Is(err, errEncodeJSON) {
+			respondError(w, err, h.log)
+		} else {
+			h.log.Error("Failed to write create task comment response", "error", err)
+		}
+		return
+	}
+	h.log.Info("Task comment created successfully", "taskID", taskID, "userID", userID, "comment", commentInput)
+}
+
+func (h *TaskHandler) Comments(w http.ResponseWriter, r *http.Request) {
+	userID, ok := UserIDFromContext(r.Context())
+	if !ok {
+		if err := writeErrorResponse(w, http.StatusUnauthorized, "Unauthorized"); err != nil {
+			h.log.Error("Failed to write comments of task response", "error", err)
+		}
+		return
+	}
+	query := r.URL.Query()
+	filter := domain.TaskCommentFilter{
+		Limit:  20,
+		Offset: 0,
+	}
+	taskID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		respondError(w, domain.ErrInvalidInput, h.log)
+		return
+	}
+	filter.TaskID = &taskID
+	if query.Has("limit") {
+		limit, err := strconv.Atoi(query.Get("limit"))
+		if err != nil {
+			respondError(w, domain.ErrInvalidInput, h.log)
+			return
+		}
+		filter.Limit = limit
+	}
+
+	if query.Has("offset") {
+		offset, err := strconv.Atoi(query.Get("offset"))
+		if err != nil {
+			respondError(w, domain.ErrInvalidInput, h.log)
+			return
+		}
+		filter.Offset = offset
+	}
+
+	h.log.Info("Gets task comments", "filter", filter)
+	comments, total, err := h.s.Comments(r.Context(), userID, filter)
+	if err != nil {
+		respondError(w, err, h.log)
+		return
+	}
+	if err := writeJSON(w, http.StatusOK, NewCreateListTaskCommentsResponse(comments, total, filter.Limit, filter.Offset)); err != nil {
+		if errors.Is(err, errEncodeJSON) {
+			respondError(w, err, h.log)
+		} else {
+			h.log.Error("Failed to write task comments response", "error", err)
+		}
+		return
+	}
+	h.log.Info("Gets task comments successfully", "total", total, "filter", filter)
 }
