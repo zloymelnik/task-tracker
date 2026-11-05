@@ -53,3 +53,23 @@ func NewCreateTaskResponse(task domain.Task) CreateTaskResponse {
 		Version:     task.Version,
 	}
 }
+
+type ListTasksResponse struct {
+	Items  []CreateTaskResponse `json:"items"`
+	Total  int                  `json:"total"`
+	Limit  int                  `json:"limit"`
+	Offset int                  `json:"offset"`
+}
+
+func NewCreateTaskListResponse(tasks []domain.Task, total, limit, offset int) ListTasksResponse {
+	items := make([]CreateTaskResponse, 0, len(tasks))
+	for _, task := range tasks {
+		items = append(items, NewCreateTaskResponse(task))
+	}
+	return ListTasksResponse{
+		Items:  items,
+		Total:  total,
+		Limit:  limit,
+		Offset: offset,
+	}
+}

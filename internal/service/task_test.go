@@ -18,6 +18,10 @@ type taskRepositoryFunc func(context.Context, *domain.Task) error
 
 func (f taskRepositoryFunc) Save(ctx context.Context, task *domain.Task) error { return f(ctx, task) }
 
+func (f taskRepositoryFunc) List(context.Context, domain.TaskFilter) ([]domain.Task, int, error) {
+	panic("unexpected List in create-task test")
+}
+
 type taskHistoryRepositoryFunc func(context.Context, *domain.TaskHistory) error
 
 func (f taskHistoryRepositoryFunc) Save(ctx context.Context, history *domain.TaskHistory) error {
@@ -25,6 +29,10 @@ func (f taskHistoryRepositoryFunc) Save(ctx context.Context, history *domain.Tas
 }
 
 type taskMembershipFunc func(context.Context, uuid.UUID, uuid.UUID) (*domain.TeamMember, error)
+
+func (f taskMembershipFunc) GetByTeamAndUserID(context.Context, uuid.UUID, uuid.UUID) (*domain.TeamMember, error) {
+	panic("unexpected unlocked membership read in create-task test")
+}
 
 func (f taskMembershipFunc) GetByTeamAndUserIDForUpdate(ctx context.Context, team, user uuid.UUID) (*domain.TeamMember, error) {
 	return f(ctx, team, user)

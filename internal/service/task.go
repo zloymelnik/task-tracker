@@ -13,6 +13,7 @@ import (
 
 type TaskRepository interface {
 	Save(ctx context.Context, task *domain.Task) error
+	List(ctx context.Context, filter domain.TaskFilter) ([]domain.Task, int, error)
 }
 
 type TaskHistoryRepository interface {
@@ -21,6 +22,7 @@ type TaskHistoryRepository interface {
 
 type TeamMemberRepo interface {
 	GetByTeamAndUserIDForUpdate(ctx context.Context, teamID uuid.UUID, userID uuid.UUID) (*domain.TeamMember, error)
+	GetByTeamAndUserID(ctx context.Context, teamID, userID uuid.UUID) (*domain.TeamMember, error)
 }
 
 type TaskService struct {
@@ -141,4 +143,51 @@ func validateDescription(descr string) error {
 		return fmt.Errorf("%w: description must contain at most 65535 bytes", domain.ErrInvalidInput)
 	}
 	return nil
+}
+
+func (s *TaskService) List(
+	ctx context.Context,
+	actorID uuid.UUID,
+	filter domain.TaskFilter,
+) ([]domain.Task, int, error) {
+	if actorID == uuid.Nil {
+		return nil, 0, fmt.Errorf("get task list: %w: actor_id must not be nil", domain.ErrInvalidInput)
+	}
+	if filter.TeamID == nil || *filter.TeamID == uuid.Nil {
+		return nil, 0, fmt.Errorf("get task list: %w: team_id must not be nil", domain.ErrInvalidInput)
+	}
+	if filter.Status != nil {
+		if *filter.Status != domain.Todo && *filter.Status != domain.InProgress && *filter.Status != domain.Done {
+			return nil, 0, fmt.Errorf("get task list: %w: wrong status", domain.ErrInvalidInput)
+		}
+	}
+	if filter.AssigneeID != nil {
+		if *filter.AssigneeID == uuid.Nil {
+			return nil, 0, fmt.Errorf("get task list: %w: wrong assignee_id", domain.ErrInvalidInput)
+		}
+	}
+	if filter.Limit < 1 || filter.Limit > 100 {
+		return nil, 0, fmt.Errorf("get task list: %w: limit must be between 1 and 100", domain.ErrInvalidInput)
+	}
+	if filter.Offset < 0 {
+		return nil, 0, fmt.Errorf("get task list: %w: ofset must be greater than or equal to 0", domain.ErrInvalidInput)
+	}
+	actor, err := s.tmr.GetByTeamAndUserID(ctx, *filter.TeamID, actorID)
+	if err != nil {
+		if errors.Is(err, domain.ErrTeamMemberNotFound) {
+			return nil, 0, domain.ErrForbidden
+		}
+		return nil, 0, fmt.Errorf("get actor membership: %w", err)
+	}
+	if actor.Role != domain.OwnerRole &&
+		actor.Role != domain.AdminRole &&
+		actor.Role != domain.MemberRole {
+		return nil, 0, domain.ErrForbidden
+	}
+	tasks, total, err := s.tr.List(ctx, filter)
+	if err != nil {
+		return nil, 0, fmt.Errorf("get task list: %w: request error", err)
+	}
+	s.log.Debug("Team: get list of task sucessfully", "filter", filter, "count", len(tasks))
+	return tasks, total, nil
 }

@@ -27,3 +27,11 @@ type Task struct {
 	ClosedAt    *time.Time
 	Version     uint32
 }
+
+type TaskFilter struct {
+	TeamID     *uuid.UUID
+	Status     *TaskStatus
+	AssigneeID *uuid.UUID
+	Offset     int
+	Limit      int
+}

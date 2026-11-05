@@ -22,6 +22,10 @@ import (
 
 type taskServiceFunc func(context.Context, uuid.UUID, service.CreateTaskInput) (*domain.Task, error)
 
+func (f taskServiceFunc) List(context.Context, uuid.UUID, domain.TaskFilter) ([]domain.Task, int, error) {
+	panic("unexpected List in create-task test")
+}
+
 func (f taskServiceFunc) Create(ctx context.Context, id uuid.UUID, input service.CreateTaskInput) (*domain.Task, error) {
 	return f(ctx, id, input)
 }
