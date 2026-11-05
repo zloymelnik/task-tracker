@@ -22,6 +22,14 @@ import (
 
 type listTaskServiceFunc func(context.Context, uuid.UUID, domain.TaskFilter) ([]domain.Task, int, error)
 
+func (f listTaskServiceFunc) History(context.Context, uuid.UUID, domain.TaskHistoryFilter) ([]domain.TaskHistory, int, error) {
+	panic("unexpected History in list-task test")
+}
+
+func (f listTaskServiceFunc) Update(context.Context, uuid.UUID, uuid.UUID, service.UpdateTaskInput) (*domain.Task, error) {
+	panic("unexpected Update in list-task test")
+}
+
 func (f listTaskServiceFunc) List(ctx context.Context, actor uuid.UUID, filter domain.TaskFilter) ([]domain.Task, int, error) {
 	return f(ctx, actor, filter)
 }

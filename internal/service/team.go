@@ -13,7 +13,7 @@ import (
 
 type TeamRepository interface {
 	Save(ctx context.Context, team *domain.Team) error
-	ListByUserID(ctx context.Context, userID uuid.UUID) ([]domain.Team, error)
+	List(ctx context.Context, filter domain.TeamFilter) ([]domain.Team, int, error)
 }
 
 type TeamMemberRepository interface {
@@ -91,17 +91,25 @@ func (t *TeamService) Create(
 	return newTeam, nil
 }
 
-func (t *TeamService) List(ctx context.Context, userID uuid.UUID) ([]domain.Team, error) {
-	if userID == uuid.Nil {
-		return nil, fmt.Errorf("get team list: %w: user_id must not be nil", domain.ErrInvalidInput)
+func (t *TeamService) List(ctx context.Context, actorID uuid.UUID, filter domain.TeamFilter) ([]domain.Team, int, error) {
+	if actorID == uuid.Nil {
+		return nil, 0, fmt.Errorf("get team list: %w: user_id must not be nil", domain.ErrInvalidInput)
 	}
-	t.log.Debug("Team: get list of team by user_id", "user_id", userID)
-	teams, err := t.tr.ListByUserID(ctx, userID)
+	if err := validateLimit(filter.Limit); err != nil {
+		return nil, 0, fmt.Errorf("get team list: %w", err)
+	}
+	if err := validateOffset(filter.Offset); err != nil {
+		return nil, 0, fmt.Errorf("get team list: %w:", err)
+	}
+	filter.UserID = &actorID
+
+	t.log.Debug("Team: get list of team", "filter", filter)
+	teams, total, err := t.tr.List(ctx, filter)
 	if err != nil {
-		return nil, fmt.Errorf("get team list: %w: request error", err)
+		return nil, 0, fmt.Errorf("get team list: %w: request error", err)
 	}
-	t.log.Debug("Team: get list of team by user_id sucessfully", "user_id", userID, "count", len(teams))
-	return teams, nil
+	t.log.Debug("Team: get list of team sucessfully", "filter", filter, "total", total)
+	return teams, total, nil
 }
 
 type AddTeamMemberInput struct {

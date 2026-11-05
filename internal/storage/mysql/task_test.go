@@ -130,6 +130,10 @@ func TestCreateTaskTransactionCommit(t *testing.T) {
 
 type duplicateTaskHistoryRepository struct{ repo *mysql.TaskHistoryRepository }
 
+func (r duplicateTaskHistoryRepository) List(ctx context.Context, filter domain.TaskHistoryFilter) ([]domain.TaskHistory, int, error) {
+	return r.repo.List(ctx, filter)
+}
+
 func (r duplicateTaskHistoryRepository) Save(ctx context.Context, h *domain.TaskHistory) error {
 	if err := r.repo.Save(ctx, h); err != nil {
 		return err

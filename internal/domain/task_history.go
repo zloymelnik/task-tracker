@@ -20,3 +20,9 @@ type TaskHistory struct {
 	Changes   TaskChanges
 	CreatedAt time.Time
 }
+
+type TaskHistoryFilter struct {
+	TaskID *uuid.UUID
+	Offset int
+	Limit  int
+}

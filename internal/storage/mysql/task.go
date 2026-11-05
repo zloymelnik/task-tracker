@@ -2,8 +2,11 @@ package mysql
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"strings"
 	"time"
 
@@ -57,7 +60,7 @@ func (t *TaskRepository) Save(ctx context.Context, task *domain.Task) error {
 }
 
 func (t *TaskRepository) List(ctx context.Context, filter domain.TaskFilter) ([]domain.Task, int, error) {
-	t.log.Debug("MySQL: Tasks: Gets tasks", "filter", filter)
+	t.log.Debug("MySQL: Task: Gets tasks", "filter", filter)
 	ctx, cancel := context.WithTimeout(ctx, t.timeout)
 	defer cancel()
 	executor := getExecutor(ctx, t.db)
@@ -66,7 +69,7 @@ func (t *TaskRepository) List(ctx context.Context, filter domain.TaskFilter) ([]
 	var args []interface{}
 	if filter.TeamID != nil {
 		if *filter.TeamID == uuid.Nil {
-			return nil, 0, fmt.Errorf("MySQL: Tasks: %w: team_id must not be zero", domain.ErrInvalidInput)
+			return nil, 0, fmt.Errorf("MySQL: Task: %w: team_id must not be zero", domain.ErrInvalidInput)
 		}
 		conditions.WriteString(" AND team_id = ?")
 		args = append(args, uuidToBytes(*filter.TeamID))
@@ -77,7 +80,7 @@ func (t *TaskRepository) List(ctx context.Context, filter domain.TaskFilter) ([]
 	}
 	if filter.AssigneeID != nil {
 		if *filter.AssigneeID == uuid.Nil {
-			return nil, 0, fmt.Errorf("MySQL: Tasks: %w: assignee_id must not be zero", domain.ErrInvalidInput)
+			return nil, 0, fmt.Errorf("MySQL: Task: %w: assignee_id must not be zero", domain.ErrInvalidInput)
 		}
 		conditions.WriteString(" AND assignee_id = ?")
 		args = append(args, uuidToBytes(*filter.AssigneeID))
@@ -87,7 +90,7 @@ func (t *TaskRepository) List(ctx context.Context, filter domain.TaskFilter) ([]
 	var total int
 	err := executor.GetContext(ctx, &total, "SELECT COUNT(*) "+from, args...)
 	if err != nil {
-		return nil, 0, fmt.Errorf("MySQL: Tasks: Failed to get total tasks: %w", err)
+		return nil, 0, fmt.Errorf("MySQL: Task: Failed to get total tasks: %w", err)
 	}
 
 	var rawTasks []rawTask
@@ -99,7 +102,7 @@ func (t *TaskRepository) List(ctx context.Context, filter domain.TaskFilter) ([]
 		args...,
 	)
 	if err != nil {
-		return nil, 0, fmt.Errorf("MySQL: Tasks: Failed to get ltasks: %w", err)
+		return nil, 0, fmt.Errorf("MySQL: Task: Failed to get ltasks: %w", err)
 	}
 	tasks := make([]domain.Task, 0, len(rawTasks))
 	for _, r := range rawTasks {
@@ -129,15 +132,15 @@ type rawTask struct {
 func rawToTask(r *rawTask) (*domain.Task, error) {
 	id, err := bytesToUUID(r.ID)
 	if err != nil {
-		return nil, fmt.Errorf("MySQL: task: Wrong parse task id: %w", err)
+		return nil, fmt.Errorf("MySQL: Task: Wrong parse task id: %w", err)
 	}
 	teamID, err := bytesToUUID(r.TeamID)
 	if err != nil {
-		return nil, fmt.Errorf("MySQL: task: Wrong parse team id: %w", err)
+		return nil, fmt.Errorf("MySQL: Task: Wrong parse team id: %w", err)
 	}
 	createdBy, err := bytesToUUID(r.CreatedBy)
 	if err != nil {
-		return nil, fmt.Errorf("MySQL: task: Wrong parse created id: %w", err)
+		return nil, fmt.Errorf("MySQL: Task: Wrong parse created id: %w", err)
 	}
 	var assigneeID *uuid.UUID
 	if r.AssigneeID != nil {
@@ -160,4 +163,78 @@ func rawToTask(r *rawTask) (*domain.Task, error) {
 		ClosedAt:    r.ClosedAt,
 		Version:     r.Version,
 	}, nil
+}
+
+func (t *TaskRepository) GetByID(ctx context.Context, taskID uuid.UUID) (*domain.Task, error) {
+	t.log.Debug("MySQL: Tasks: Gets task by id", "id", taskID)
+	ctx, cancel := context.WithTimeout(ctx, t.timeout)
+	defer cancel()
+	executor := getExecutor(ctx, t.db)
+
+	var raw rawTask
+	err := executor.GetContext(ctx, &raw,
+		`SELECT id, team_id, created_by, assignee_id, title, description, status, created_at, updated_at, closed_at, version
+		FROM tasks
+		WHERE id = ?`,
+		uuidToBytes(taskID),
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, domain.ErrTaskNotFound
+		}
+		return nil, fmt.Errorf("MySQL: Task: Failed to get task row: %w", err)
+	}
+	task, err := rawToTask(&raw)
+	if err != nil {
+		return nil, fmt.Errorf("MySQL: Task: Failed to parse task row: %w", err)
+	}
+	t.log.Debug("MySQL: task: Gets task data for id successfully", "task", task)
+	return task, nil
+}
+
+func (t *TaskRepository) Update(ctx context.Context, task *domain.Task, expectedVersion uint32) error {
+	if expectedVersion < 1 || expectedVersion > math.MaxUint32-1 {
+		return fmt.Errorf("MySQL: Task: Failed to update task by id: %w", domain.ErrInvalidInput)
+	}
+	t.log.Debug("MySQL: Tasks: Updates task by id", "task", task, "expectedVersion", expectedVersion)
+	ctx, cancel := context.WithTimeout(ctx, t.timeout)
+	defer cancel()
+	executor := getExecutor(ctx, t.db)
+
+	var assigneeID any
+	if task.AssigneeID != nil {
+		assigneeID = uuidToBytes(*task.AssigneeID)
+	}
+	res, err := executor.ExecContext(
+		ctx,
+		`UPDATE tasks
+		SET title = ?,
+			description = ?,
+			assignee_id = ?,
+			status = ?,
+			updated_at = ?,
+			closed_at = ?,
+			version = version + 1
+		WHERE id = ? AND version = ?`,
+		task.Title,
+		task.Description,
+		assigneeID,
+		task.Status,
+		task.UpdatedAt,
+		task.ClosedAt,
+		uuidToBytes(task.ID),
+		expectedVersion,
+	)
+	if err != nil {
+		return fmt.Errorf("MySQL: Task: Failed to update task by id: %w", err)
+	}
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("MySQL: Task: Failed to update task by id: %w", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("MySQL: Tasks: Failed to update task by id: %w", domain.ErrTaskVersionConflict)
+	}
+	task.Version = expectedVersion + 1
+	return nil
 }

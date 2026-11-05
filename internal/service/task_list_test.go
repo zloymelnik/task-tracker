@@ -14,6 +14,14 @@ import (
 
 type listTaskRepositoryFunc func(context.Context, domain.TaskFilter) ([]domain.Task, int, error)
 
+func (f listTaskRepositoryFunc) GetByID(context.Context, uuid.UUID) (*domain.Task, error) {
+	panic("unexpected GetByID in list-task test")
+}
+
+func (f listTaskRepositoryFunc) Update(context.Context, *domain.Task, uint32) error {
+	panic("unexpected Update in list-task test")
+}
+
 func (f listTaskRepositoryFunc) List(ctx context.Context, filter domain.TaskFilter) ([]domain.Task, int, error) {
 	return f(ctx, filter)
 }

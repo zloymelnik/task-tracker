@@ -23,11 +23,27 @@ import (
 
 type createTaskRouteFunc func(context.Context, uuid.UUID, service.CreateTaskInput) (*domain.Task, error)
 
+func (f createTaskRouteFunc) History(context.Context, uuid.UUID, domain.TaskHistoryFilter) ([]domain.TaskHistory, int, error) {
+	panic("unexpected History in create-task route test")
+}
+
+func (f createTaskRouteFunc) Update(context.Context, uuid.UUID, uuid.UUID, service.UpdateTaskInput) (*domain.Task, error) {
+	panic("unexpected Update in create-task route test")
+}
+
 func (f createTaskRouteFunc) List(context.Context, uuid.UUID, domain.TaskFilter) ([]domain.Task, int, error) {
 	panic("unexpected List in create-task route test")
 }
 
 type listTaskRouteFunc func(context.Context, uuid.UUID, domain.TaskFilter) ([]domain.Task, int, error)
+
+func (f listTaskRouteFunc) History(context.Context, uuid.UUID, domain.TaskHistoryFilter) ([]domain.TaskHistory, int, error) {
+	panic("unexpected History in list-task route test")
+}
+
+func (f listTaskRouteFunc) Update(context.Context, uuid.UUID, uuid.UUID, service.UpdateTaskInput) (*domain.Task, error) {
+	panic("unexpected Update in list-task route test")
+}
 
 func (f listTaskRouteFunc) List(ctx context.Context, actor uuid.UUID, filter domain.TaskFilter) ([]domain.Task, int, error) {
 	return f(ctx, actor, filter)

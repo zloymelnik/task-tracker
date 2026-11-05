@@ -22,6 +22,14 @@ import (
 
 type taskServiceFunc func(context.Context, uuid.UUID, service.CreateTaskInput) (*domain.Task, error)
 
+func (f taskServiceFunc) History(context.Context, uuid.UUID, domain.TaskHistoryFilter) ([]domain.TaskHistory, int, error) {
+	panic("unexpected History in create-task test")
+}
+
+func (f taskServiceFunc) Update(context.Context, uuid.UUID, uuid.UUID, service.UpdateTaskInput) (*domain.Task, error) {
+	panic("unexpected Update in create-task test")
+}
+
 func (f taskServiceFunc) List(context.Context, uuid.UUID, domain.TaskFilter) ([]domain.Task, int, error) {
 	panic("unexpected List in create-task test")
 }

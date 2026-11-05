@@ -14,7 +14,7 @@ import (
 	"github.com/zloymelnik/task-tracker/internal/storage/mysql"
 )
 
-func TestTeamRepositoryListByUserID(t *testing.T) {
+func TestTeamRepositoryList(t *testing.T) {
 	db := newTeamTestDB(t)
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	repo := mysql.NewTeamRepository(db, log, 5*time.Second)
@@ -48,22 +48,47 @@ func TestTeamRepositoryListByUserID(t *testing.T) {
 			t.Fatalf("seed membership: %v", err)
 		}
 	}
-	got, err := repo.ListByUserID(ctx, user)
-	if err != nil {
+	// A second member must not duplicate teams when no user filter is used.
+	if err := members.Save(ctx, &domain.TeamMember{TeamID: teams[0].ID, UserID: other, Role: domain.MemberRole, JoinedAt: now}); err != nil {
 		t.Fatal(err)
 	}
-	want := []domain.Team{teams[1], teams[0], teams[2]}
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("ListByUserID()=%+v, want ordered memberships %+v", got, want)
+	unknown := uuid.New()
+	for _, tt := range []struct {
+		name   string
+		filter domain.TeamFilter
+		want   []domain.Team
+		total  int
+	}{
+		{"all memberships", domain.TeamFilter{UserID: &user, Limit: 20}, []domain.Team{teams[1], teams[0], teams[2]}, 3},
+		{"first page", domain.TeamFilter{UserID: &user, Limit: 1}, []domain.Team{teams[1]}, 3},
+		{"second page", domain.TeamFilter{UserID: &user, Limit: 1, Offset: 1}, []domain.Team{teams[0]}, 3},
+		{"last page", domain.TeamFilter{UserID: &user, Limit: 2, Offset: 2}, []domain.Team{teams[2]}, 3},
+		{"past end", domain.TeamFilter{UserID: &user, Limit: 2, Offset: 20}, []domain.Team{}, 3},
+		{"unknown user", domain.TeamFilter{UserID: &unknown, Limit: 20}, []domain.Team{}, 0},
+		{"no user filter", domain.TeamFilter{Limit: 1}, nil, 5},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got, total, err := repo.List(ctx, tt.filter)
+			if err != nil || got == nil || total != tt.total {
+				t.Fatalf("List()=(%v,%d,%v), want total %d and non-nil list", got, total, err, tt.total)
+			}
+			if tt.want != nil && !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("List()=%+v, want %+v", got, tt.want)
+			}
+			if tt.want == nil && len(got) != 1 {
+				t.Errorf("page length=%d, want 1", len(got))
+			}
+		})
 	}
-	empty, err := repo.ListByUserID(ctx, uuid.New())
-	if err != nil || empty == nil || len(empty) != 0 {
-		t.Errorf("unknown user list=(%v, %v), want empty non-nil slice", empty, err)
+	zero := uuid.Nil
+	got, total, err := repo.List(ctx, domain.TeamFilter{UserID: &zero, Limit: 20})
+	if got != nil || total != 0 || !errors.Is(err, domain.ErrInvalidInput) {
+		t.Errorf("zero user List()=(%v,%d,%v)", got, total, err)
 	}
 	canceled, stop := context.WithCancel(ctx)
 	stop()
-	got, err = repo.ListByUserID(canceled, user)
-	if got != nil || !errors.Is(err, context.Canceled) {
+	got, total, err = repo.List(canceled, domain.TeamFilter{UserID: &user, Limit: 20})
+	if got != nil || total != 0 || !errors.Is(err, context.Canceled) {
 		t.Errorf("canceled list=(%v, %v), want nil and context.Canceled", got, err)
 	}
 }

@@ -30,7 +30,7 @@ func (f inviteServiceFunc) Create(context.Context, uuid.UUID, service.CreateTeam
 	panic("unexpected Create call in invite stub")
 }
 
-func (f inviteServiceFunc) List(context.Context, uuid.UUID) ([]domain.Team, error) {
+func (f inviteServiceFunc) List(context.Context, uuid.UUID, domain.TeamFilter) ([]domain.Team, int, error) {
 	panic("unexpected List call in invite stub")
 }
 

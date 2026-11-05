@@ -12,3 +12,9 @@ type Team struct {
 	CreatedAt time.Time
 	CreatedBy uuid.UUID
 }
+
+type TeamFilter struct {
+	UserID *uuid.UUID
+	Offset int
+	Limit  int
+}

@@ -27,6 +27,8 @@ func NewRouter(h *handler.Handler, parser handler.TokenParser, log *slog.Logger)
 
 			r.Post("/tasks", h.Task.Create)
 			r.Get("/tasks", h.Task.List)
+			r.Put("/tasks/{id}", h.Task.Update)
+			r.Get("/tasks/{id}/history", h.Task.History)
 		})
 	})
 

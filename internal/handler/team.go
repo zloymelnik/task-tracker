@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -14,7 +15,7 @@ import (
 
 type TeamService interface {
 	Create(ctx context.Context, creatorID uuid.UUID, input service.CreateTeamInput) (*domain.Team, error)
-	List(ctx context.Context, userID uuid.UUID) ([]domain.Team, error)
+	List(ctx context.Context, actorID uuid.UUID, filter domain.TeamFilter) ([]domain.Team, int, error)
 	AddMember(ctx context.Context, actorID uuid.UUID, teamID uuid.UUID, input service.AddTeamMemberInput) (*domain.TeamMember, error)
 	UpdateRole(ctx context.Context, actorID, teamID, userID uuid.UUID, role domain.TeamRole) error
 }
@@ -70,13 +71,34 @@ func (h *TeamHandler) List(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	teams, err := h.s.List(r.Context(), userID)
+	query := r.URL.Query()
+	filter := domain.TeamFilter{
+		Limit:  20,
+		Offset: 0,
+	}
+	if query.Has("limit") {
+		limit, err := strconv.Atoi(query.Get("limit"))
+		if err != nil {
+			respondError(w, domain.ErrInvalidInput, h.log)
+			return
+		}
+		filter.Limit = limit
+	}
+	if query.Has("offset") {
+		offset, err := strconv.Atoi(query.Get("offset"))
+		if err != nil {
+			respondError(w, domain.ErrInvalidInput, h.log)
+			return
+		}
+		filter.Offset = offset
+	}
+	h.log.Info("Gets team list", "filter", filter, "user_id", userID)
+	teams, total, err := h.s.List(r.Context(), userID, filter)
 	if err != nil {
 		respondError(w, err, h.log)
 		return
 	}
-
-	if err := writeJSON(w, http.StatusOK, NewCreateTeamResponseForList(teams)); err != nil {
+	if err := writeJSON(w, http.StatusOK, NewCreateTeamResponseForList(teams, total, filter.Limit, filter.Offset)); err != nil {
 		if errors.Is(err, errEncodeJSON) {
 			respondError(w, err, h.log)
 		} else {
@@ -84,7 +106,7 @@ func (h *TeamHandler) List(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	h.log.Info("Team list got successfully", "user_id", userID, "count", len(teams))
+	h.log.Info("Team list got successfully", "user_id", userID, "filter", filter, "total", total)
 }
 
 func (h *TeamHandler) AddMember(w http.ResponseWriter, r *http.Request) {

@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -72,4 +74,28 @@ func NewCreateTaskListResponse(tasks []domain.Task, total, limit, offset int) Li
 		Limit:  limit,
 		Offset: offset,
 	}
+}
+
+type UpdateTaskRequest struct {
+	Version     uint32             `json:"version"`
+	Title       *string            `json:"title"`
+	Description *string            `json:"description"`
+	Status      *domain.TaskStatus `json:"status"`
+	AssigneeID  json.RawMessage    `json:"assignee_id"`
+}
+
+func (r UpdateTaskRequest) ToInput() (service.UpdateTaskInput, error) {
+	input := service.UpdateTaskInput{
+		Version:     r.Version,
+		Title:       r.Title,
+		Description: r.Description,
+		Status:      r.Status,
+	}
+	if len(r.AssigneeID) > 0 {
+		input.AssigneeSet = true
+		if err := json.Unmarshal(r.AssigneeID, &input.AssigneeID); err != nil {
+			return service.UpdateTaskInput{}, fmt.Errorf("%w: invalid assignee_id", domain.ErrInvalidInput)
+		}
+	}
+	return input, nil
 }

@@ -36,13 +36,25 @@ func NewCreateTeamResponse(team domain.Team) CreateTeamResponse {
 	}
 }
 
+type ListTeamsResponse struct {
+	Items  []CreateTeamResponse `json:"items"`
+	Total  int                  `json:"total"`
+	Limit  int                  `json:"limit"`
+	Offset int                  `json:"offset"`
+}
+
 // NewCreateTeamResponse selects the team fields exposed by the API.
-func NewCreateTeamResponseForList(teams []domain.Team) []CreateTeamResponse {
+func NewCreateTeamResponseForList(teams []domain.Team, total, limit, offset int) ListTeamsResponse {
 	ts := make([]CreateTeamResponse, 0, len(teams))
 	for _, t := range teams {
 		ts = append(ts, NewCreateTeamResponse(t))
 	}
-	return ts
+	return ListTeamsResponse{
+		Items:  ts,
+		Total:  total,
+		Limit:  limit,
+		Offset: offset,
+	}
 }
 
 type InviteUserRequest struct {

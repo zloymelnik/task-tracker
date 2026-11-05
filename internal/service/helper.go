@@ -34,3 +34,17 @@ func emailNormalize(email string) (string, error) {
 	}
 	return normalized, nil
 }
+
+func validateLimit(limit int) error {
+	if limit < 1 || limit > 100 {
+		return fmt.Errorf("%w: limit must be between 1 and 100", domain.ErrInvalidInput)
+	}
+	return nil
+}
+
+func validateOffset(offset int) error {
+	if offset < 0 {
+		return fmt.Errorf("%w: offset must be greater than or equal to 0", domain.ErrInvalidInput)
+	}
+	return nil
+}

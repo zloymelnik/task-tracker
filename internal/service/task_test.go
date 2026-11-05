@@ -16,6 +16,14 @@ import (
 
 type taskRepositoryFunc func(context.Context, *domain.Task) error
 
+func (f taskRepositoryFunc) GetByID(context.Context, uuid.UUID) (*domain.Task, error) {
+	panic("unexpected GetByID in create-task test")
+}
+
+func (f taskRepositoryFunc) Update(context.Context, *domain.Task, uint32) error {
+	panic("unexpected Update in create-task test")
+}
+
 func (f taskRepositoryFunc) Save(ctx context.Context, task *domain.Task) error { return f(ctx, task) }
 
 func (f taskRepositoryFunc) List(context.Context, domain.TaskFilter) ([]domain.Task, int, error) {
@@ -23,6 +31,10 @@ func (f taskRepositoryFunc) List(context.Context, domain.TaskFilter) ([]domain.T
 }
 
 type taskHistoryRepositoryFunc func(context.Context, *domain.TaskHistory) error
+
+func (f taskHistoryRepositoryFunc) List(context.Context, domain.TaskHistoryFilter) ([]domain.TaskHistory, int, error) {
+	panic("unexpected List in history-save test")
+}
 
 func (f taskHistoryRepositoryFunc) Save(ctx context.Context, history *domain.TaskHistory) error {
 	return f(ctx, history)
