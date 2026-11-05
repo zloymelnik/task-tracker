@@ -48,6 +48,14 @@ func respondError(w http.ResponseWriter, err error, log *slog.Logger) {
 		status, message = http.StatusConflict, "email already exists"
 	case errors.Is(err, domain.ErrInvalidCredentials):
 		status, message = http.StatusUnauthorized, "invalid credentials"
+	case errors.Is(err, domain.ErrForbidden):
+		status, message = http.StatusForbidden, "forbidden"
+	case errors.Is(err, domain.ErrUserNotFound):
+		status, message = http.StatusNotFound, "user not found"
+	case errors.Is(err, domain.ErrTeamMemberAlreadyExists):
+		status, message = http.StatusConflict, "already exists"
+	case errors.Is(err, domain.ErrTeamMemberNotFound):
+		status, message = http.StatusNotFound, "member not found"
 	default:
 		log.Error("Request failed", "error", err)
 	}

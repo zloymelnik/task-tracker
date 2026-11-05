@@ -5,10 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net/mail"
-	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -29,7 +26,7 @@ type AuthService struct {
 	log   *slog.Logger
 }
 
-func NewAuth(cfg config.Auth, repository UserRepository, log *slog.Logger) *AuthService {
+func NewAuthService(cfg config.Auth, repository UserRepository, log *slog.Logger) *AuthService {
 	return &AuthService{
 		cfg:   cfg,
 		users: repository,
@@ -132,32 +129,6 @@ func (a *AuthService) ParseToken(tokenString string) (uuid.UUID, error) {
 		return uuid.Nil, fmt.Errorf("parse token: wrong claims: %w", err)
 	}
 	return uid, nil
-}
-
-func emailNormalize(email string) (string, error) {
-	email = strings.TrimSpace(email)
-
-	parsed, err := mail.ParseAddress(email)
-	if err != nil || parsed.Address != email {
-		return "", fmt.Errorf("%w: invalid email format", domain.ErrInvalidInput)
-	}
-
-	normalized := strings.ToLower(parsed.Address)
-	if len(normalized) > 255 {
-		return "", fmt.Errorf("%w: email must contain at most 255 characters", domain.ErrInvalidInput)
-	}
-	return normalized, nil
-}
-
-func nameNormalize(name string) (string, error) {
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return "", fmt.Errorf("%w: name is required", domain.ErrInvalidInput)
-	}
-	if utf8.RuneCountInString(name) > 255 {
-		return "", fmt.Errorf("%w: name must contain at most 255 characters", domain.ErrInvalidInput)
-	}
-	return name, nil
 }
 
 func checkPassword(password string) error {
