@@ -51,7 +51,7 @@ func newTaskFixture(t *testing.T) (*sqlx.DB, *mysql.Repository, *domain.Team, *d
 func TestCreateTaskTransactionCommit(t *testing.T) {
 	db, repos, team, actor, assignee := newTaskFixture(t)
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	svc := service.NewTaskService(repos.Transactions, repos.Task, repos.TaskHistory, nil, repos.TeamMember, log)
+	svc := service.NewTaskService(repos.Transactions, repos.Task, repos.TaskHistory, nil, repos.TeamMember, nil, service.TaskCacheOptions{}, log)
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	for _, assignment := range []string{"unassigned", "assigned"} {
@@ -145,7 +145,7 @@ func TestCreateTaskRollbackOnHistoryFailure(t *testing.T) {
 	db, repos, team, actor, _ := newTaskFixture(t)
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	history := duplicateTaskHistoryRepository{repo: repos.TaskHistory}
-	svc := service.NewTaskService(repos.Transactions, repos.Task, history, nil, repos.TeamMember, log)
+	svc := service.NewTaskService(repos.Transactions, repos.Task, history, nil, repos.TeamMember, nil, service.TaskCacheOptions{}, log)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	got, err := svc.Create(ctx, actor.ID, service.CreateTaskInput{TeamID: team.ID, Title: "Must roll back"})

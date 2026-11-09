@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/zloymelnik/task-tracker/internal/domain"
+	"golang.org/x/sync/singleflight"
 )
 
 type TaskRepository interface {
@@ -36,22 +37,27 @@ type TeamMemberRepo interface {
 }
 
 type TaskService struct {
-	tx  TransactionManager
-	tr  TaskRepository
-	thr TaskHistoryRepository
-	tcr TaskCommentRepository
-	tmr TeamMemberRepo
-	log *slog.Logger
+	tx           TransactionManager
+	tr           TaskRepository
+	thr          TaskHistoryRepository
+	tcr          TaskCommentRepository
+	tmr          TeamMemberRepo
+	cache        Cache
+	cacheOptions TaskCacheOptions
+	taskLoads    singleflight.Group
+	log          *slog.Logger
 }
 
-func NewTaskService(tx TransactionManager, tr TaskRepository, thr TaskHistoryRepository, tcr TaskCommentRepository, tmr TeamMemberRepo, log *slog.Logger) *TaskService {
+func NewTaskService(tx TransactionManager, tr TaskRepository, thr TaskHistoryRepository, tcr TaskCommentRepository, tmr TeamMemberRepo, cache Cache, co TaskCacheOptions, log *slog.Logger) *TaskService {
 	return &TaskService{
-		tx:  tx,
-		tr:  tr,
-		thr: thr,
-		tcr: tcr,
-		tmr: tmr,
-		log: log,
+		tx:           tx,
+		tr:           tr,
+		thr:          thr,
+		tcr:          tcr,
+		tmr:          tmr,
+		cache:        cache,
+		cacheOptions: co,
+		log:          log,
 	}
 }
 
@@ -144,6 +150,11 @@ func (s *TaskService) Create(
 	if err != nil {
 		return nil, fmt.Errorf("create task: %w", err)
 	}
+	if s.cache != nil {
+		if err := s.cache.Invalidate(ctx, generateTaskListVersionKey(task.TeamID)); err != nil {
+			s.log.Warn("create task: wrong invalidate cache", "error", err)
+		}
+	}
 	s.log.Debug("Task: create a new task successfully", "task_id", task.ID, "task", title)
 	return task, nil
 }
@@ -192,7 +203,29 @@ func (s *TaskService) List(
 	if err := validateRole(actor.Role); err != nil {
 		return nil, 0, domain.ErrForbidden
 	}
-	tasks, total, err := s.tr.List(ctx, filter)
+
+	useCache := s.cache != nil
+	var tasks []domain.Task
+	var total int
+	if useCache {
+		generation, cacheErr := s.getTaskListGeneration(ctx, *filter.TeamID)
+		if cacheErr != nil {
+			s.log.Warn("failed to get task list generation", "error", cacheErr)
+			useCache = false
+		} else {
+			cacheKey := generateTaskListCacheKey(filter, generation)
+			page, err := s.loadTaskPage(ctx, filter, cacheKey)
+			if err != nil {
+				return nil, 0, fmt.Errorf("get task list: %w", err)
+			}
+			tasks = page.Items
+			total = page.Total
+		}
+	}
+	if !useCache {
+		tasks, total, err = s.tr.List(ctx, filter)
+	}
+
 	if err != nil {
 		return nil, 0, fmt.Errorf("get task list: %w: request error", err)
 	}
@@ -222,6 +255,7 @@ func (s *TaskService) Update(ctx context.Context, actorID, taskID uuid.UUID, inp
 	}
 
 	s.log.Debug("Task: update task", "task_id", taskID, "actor_id", actorID, "task", input)
+	changed := false
 	var updatedTask *domain.Task
 	err := s.tx.Do(ctx, func(txCtx context.Context) error {
 		task, err := s.tr.GetByID(txCtx, taskID)
@@ -352,11 +386,18 @@ func (s *TaskService) Update(ctx context.Context, actorID, taskID uuid.UUID, inp
 		if err := s.thr.Save(txCtx, history); err != nil {
 			return fmt.Errorf("update task: %w", err)
 		}
+		changed = true
 		return nil
 	})
 	if err != nil {
 		return nil, fmt.Errorf("update task: %w", err)
 	}
+	if changed && s.cache != nil {
+		if err := s.cache.Invalidate(ctx, generateTaskListVersionKey(updatedTask.TeamID)); err != nil {
+			s.log.Warn("failed to invalidate task list cache", "error", err)
+		}
+	}
+	s.log.Debug("Task: update the task successfully", "task", updatedTask)
 	return updatedTask, nil
 }
 

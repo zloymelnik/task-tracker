@@ -64,7 +64,7 @@ func TestTaskHistory(t *testing.T) {
 					}
 					return want, total, nil
 				})
-				got, count, err := service.NewTaskService(nil, repo, history, nil, members, testLogger()).History(ctx, actor, filter)
+				got, count, err := service.NewTaskService(nil, repo, history, nil, members, nil, service.TaskCacheOptions{}, testLogger()).History(ctx, actor, filter)
 				if err != nil || got == nil || !reflect.DeepEqual(got, want) || count != total || !reflect.DeepEqual(calls, []string{"task", "membership", "history"}) {
 					t.Errorf("History()=(%v,%d,%v), calls=%v", got, count, err, calls)
 				}
@@ -94,7 +94,7 @@ func TestTaskHistoryInvalidInput(t *testing.T) {
 			case "negative offset":
 				filter.Offset = -1
 			}
-			got, total, err := service.NewTaskService(nil, nil, nil, nil, nil, testLogger()).History(context.Background(), actor, filter)
+			got, total, err := service.NewTaskService(nil, nil, nil, nil, nil, nil, service.TaskCacheOptions{}, testLogger()).History(context.Background(), actor, filter)
 			if got != nil || total != 0 || !errors.Is(err, domain.ErrInvalidInput) {
 				t.Errorf("History()=(%v,%d,%v), want invalid input", got, total, err)
 			}
@@ -154,7 +154,7 @@ func TestTaskHistoryErrors(t *testing.T) {
 			case "canceled":
 				want, wantCalls = context.Canceled, "task"
 			}
-			got, total, err := service.NewTaskService(nil, repo, history, nil, members, testLogger()).History(ctx, uuid.New(), domain.TaskHistoryFilter{TaskID: &task.ID, Limit: 20})
+			got, total, err := service.NewTaskService(nil, repo, history, nil, members, nil, service.TaskCacheOptions{}, testLogger()).History(ctx, uuid.New(), domain.TaskHistoryFilter{TaskID: &task.ID, Limit: 20})
 			if got != nil || total != 0 || !errors.Is(err, want) || strings.Join(calls, ",") != wantCalls {
 				t.Errorf("History()=(%v,%d,%v) calls=%v, want nil/0/%v calls=%s", got, total, err, calls, want, wantCalls)
 			}

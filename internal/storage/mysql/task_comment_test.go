@@ -147,7 +147,7 @@ func TestAddCommentTransaction(t *testing.T) {
 			if rollback {
 				comments = failAfterCommentSave{repo: repos.TaskComment, err: failure}
 			}
-			svc := service.NewTaskService(repos.Transactions, repos.Task, repos.TaskHistory, comments, repos.TeamMember, log)
+			svc := service.NewTaskService(repos.Transactions, repos.Task, repos.TaskHistory, comments, repos.TeamMember, nil, service.TaskCacheOptions{}, log)
 			body := " \nСохранить форматирование\n "
 			got, err := svc.AddComment(ctx, actor.ID, task.ID, service.CreateTaskCommentInput{Body: body})
 			rows, total, listErr := repos.TaskComment.List(ctx, domain.TaskCommentFilter{TaskID: &task.ID, Limit: 20})

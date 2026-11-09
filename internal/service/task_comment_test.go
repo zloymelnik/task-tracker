@@ -76,7 +76,7 @@ func TestAddTaskComment(t *testing.T) {
 					return nil
 				})
 				before := time.Now().UTC().Truncate(time.Millisecond)
-				got, err := service.NewTaskService(tx, repo, nil, comments, members, testLogger()).AddComment(ctx, actor, task.ID, service.CreateTaskCommentInput{Body: body})
+				got, err := service.NewTaskService(tx, repo, nil, comments, members, nil, service.TaskCacheOptions{}, testLogger()).AddComment(ctx, actor, task.ID, service.CreateTaskCommentInput{Body: body})
 				if err != nil || got == nil {
 					t.Fatalf("AddComment()=(%v,%v)", got, err)
 				}
@@ -114,7 +114,7 @@ func TestAddTaskCommentInvalidInput(t *testing.T) {
 			case "too long Unicode":
 				body = strings.Repeat("я", 32768)
 			}
-			got, err := service.NewTaskService(nil, nil, nil, nil, nil, testLogger()).AddComment(context.Background(), actor, task, service.CreateTaskCommentInput{Body: body})
+			got, err := service.NewTaskService(nil, nil, nil, nil, nil, nil, service.TaskCacheOptions{}, testLogger()).AddComment(context.Background(), actor, task, service.CreateTaskCommentInput{Body: body})
 			if got != nil || !errors.Is(err, domain.ErrInvalidInput) {
 				t.Errorf("AddComment()=(%v,%v), want invalid input", got, err)
 			}
@@ -192,7 +192,7 @@ func TestAddTaskCommentErrors(t *testing.T) {
 			case "canceled":
 				want, wantCalls = context.Canceled, ""
 			}
-			got, err := service.NewTaskService(tx, repo, nil, comments, members, testLogger()).AddComment(ctx, uuid.New(), task.ID, service.CreateTaskCommentInput{Body: "Comment"})
+			got, err := service.NewTaskService(tx, repo, nil, comments, members, nil, service.TaskCacheOptions{}, testLogger()).AddComment(ctx, uuid.New(), task.ID, service.CreateTaskCommentInput{Body: "Comment"})
 			if got != nil || !errors.Is(err, want) || strings.Join(calls, ",") != wantCalls {
 				t.Errorf("AddComment()=(%v,%v) calls=%v, want nil/%v calls=%s", got, err, calls, want, wantCalls)
 			}
@@ -242,7 +242,7 @@ func TestTaskComments(t *testing.T) {
 					}
 					return want, total, nil
 				}}
-				got, count, err := service.NewTaskService(nil, repo, nil, comments, members, testLogger()).Comments(ctx, actor, filter)
+				got, count, err := service.NewTaskService(nil, repo, nil, comments, members, nil, service.TaskCacheOptions{}, testLogger()).Comments(ctx, actor, filter)
 				if err != nil || got == nil || !reflect.DeepEqual(got, want) || count != total || !reflect.DeepEqual(calls, []string{"task", "membership", "comments"}) {
 					t.Errorf("Comments()=(%v,%d,%v), calls=%v", got, count, err, calls)
 				}
@@ -272,7 +272,7 @@ func TestTaskCommentsInvalidInput(t *testing.T) {
 			case "negative offset":
 				filter.Offset = -1
 			}
-			got, total, err := service.NewTaskService(nil, nil, nil, nil, nil, testLogger()).Comments(context.Background(), actor, filter)
+			got, total, err := service.NewTaskService(nil, nil, nil, nil, nil, nil, service.TaskCacheOptions{}, testLogger()).Comments(context.Background(), actor, filter)
 			if got != nil || total != 0 || !errors.Is(err, domain.ErrInvalidInput) {
 				t.Errorf("Comments()=(%v,%d,%v)", got, total, err)
 			}
@@ -332,7 +332,7 @@ func TestTaskCommentsErrors(t *testing.T) {
 			case "canceled":
 				want, wantCalls = context.Canceled, "task"
 			}
-			got, total, err := service.NewTaskService(nil, repo, nil, comments, members, testLogger()).Comments(ctx, uuid.New(), domain.TaskCommentFilter{TaskID: &task.ID, Limit: 20})
+			got, total, err := service.NewTaskService(nil, repo, nil, comments, members, nil, service.TaskCacheOptions{}, testLogger()).Comments(ctx, uuid.New(), domain.TaskCommentFilter{TaskID: &task.ID, Limit: 20})
 			if got != nil || total != 0 || !errors.Is(err, want) || strings.Join(calls, ",") != wantCalls {
 				t.Errorf("Comments()=(%v,%d,%v) calls=%v, want nil/0/%v calls=%s", got, total, err, calls, want, wantCalls)
 			}
