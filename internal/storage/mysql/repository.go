@@ -21,6 +21,7 @@ type Repository struct {
 	Task         *TaskRepository
 	TaskHistory  *TaskHistoryRepository
 	TaskComment  *TaskCommentRepository
+	TeamStats    *TeamStatsRepository
 }
 
 type Executor interface {
@@ -52,5 +53,6 @@ func NewRepository(cfg config.DB, db *sqlx.DB, log *slog.Logger) *Repository {
 		Task:         NewTaskRepository(db, log, cfg.MaxRequestTime),
 		TaskHistory:  NewTaskHistoryRepository(db, log, cfg.MaxRequestTime),
 		TaskComment:  NewTaskCommentRepository(db, log, cfg.MaxRequestTime),
+		TeamStats:    NewTeamStatsRepository(db, log, cfg.MaxRequestTime),
 	}
 }

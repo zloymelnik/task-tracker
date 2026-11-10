@@ -56,7 +56,7 @@ jobs:
       - name: Test
         env:
           MYSQL_TEST_DSN: app:ci-password@tcp(127.0.0.1:${{ job.services.mysql.ports['3306'] }})/task_tracker_test
-        run: go test -race -count=1 -coverprofile=coverage.out ./...
+        run: go test -race -count=1 -coverpkg=./internal/... -coverprofile=coverage.out ./...
 
       - name: Lint
         uses: golangci/golangci-lint-action@v9

@@ -244,7 +244,8 @@ func TestUpdateTaskPermissions(t *testing.T) {
 					hr := taskHistoryRepositoryFunc(func(context.Context, *domain.TaskHistory) error { writes++; return nil })
 					tx := transactionManagerFunc(func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) })
 					got, err := service.NewTaskService(tx, repo, hr, nil, members, nil, service.TaskCacheOptions{}, testLogger()).Update(context.Background(), actor, old.ID, input)
-					allowed := identity == "author" || (identity == "assignee" && field == "status")
+					allowed := role == domain.OwnerRole || role == domain.AdminRole ||
+						identity == "author" || (identity == "assignee" && field == "status")
 					if allowed {
 						if err != nil || got == nil || writes != 2 {
 							t.Errorf("allowed update: task=%v err=%v writes=%d", got, err, writes)

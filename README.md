@@ -390,6 +390,13 @@ curl -i "http://localhost:8080/api/v1/tasks/${TASK_ID}/comments?limit=20&offset=
 
 ## Проверки
 
+Тесты находятся в `tests/`, структура каталогов повторяет `internal/`:
+например, `tests/service/` и `tests/storage/mysql/`. Они проверяют пакеты
+через публичный API. Тест SQL-отчёта будет размещён рядом с его реализацией
+в `internal/storage/mysql/`. Команда `go test ./...` запускает обе группы.
+`make test` и CI используют `-coverpkg=./internal/...`, чтобы учитывать
+покрытие рабочего кода тестами из отдельных каталогов.
+
 В терминале devcontainer:
 
 ```bash
@@ -405,6 +412,50 @@ MySQL-интеграции запускаются при заданном MYSQL_
 MYSQL_TEST_DSN="${DB_USER}:${DB_PASSWORD}@tcp(mysql:3306)/${DB_NAME}" \
   go test -race -count=1 ./...
 ```
+
+конкретные тесты
+```bash
+MYSQL_TEST_DSN="${DB_USER}:${DB_PASSWORD}@tcp(mysql:3306)/${DB_NAME}" \
+  go test -v -race -count=1 -run '^TestTeamStats$' ./internal/storage/mysql
+```
+или
+```bash
+MYSQL_TEST_DSN="${DB_USER}:${DB_PASSWORD}@tcp(mysql:3306)/${DB_NAME}" \
+  go test -v -race -count=1 -run '^TestTeamStats/top_ties$' ./internal/storage/mysql
+```
+
+Redis-интеграции запускаются при заданном `REDIS_TEST_ADDR`; пароль передаётся
+через `REDIS_TEST_PASSWORD`. Тест совместной работы MySQL и Redis требует
+настроек обоих подключений. Для запуска всех тестов со сбором покрытия
+из devcontainer (переменные `DB_USER`, `DB_PASSWORD`, `DB_NAME` и
+`REDIS_PASSWORD` должны быть доступны в окружении терминала):
+
+```bash
+MYSQL_TEST_DSN="${DB_USER}:${DB_PASSWORD}@tcp(mysql:3306)/${DB_NAME}" \
+REDIS_TEST_ADDR=redis:6379 \
+REDIS_TEST_PASSWORD="$REDIS_PASSWORD" \
+  make test
+```
+
+`make test` создаёт `coverage.out`. Покрытие по функциям и общий процент
+в строке `total` можно посмотреть командой:
+
+```bash
+go tool cover -func=coverage.out
+```
+
+Для просмотра покрытия строк в браузере сформируйте HTML-отчёт:
+
+```bash
+go tool cover -html=coverage.out -o /tmp/task-tracker-coverage.html
+```
+
+Откройте полученный файл в браузере. Если настройки интеграционных тестов
+не заданы, соответствующие проверки отмечаются `SKIP`, а не ошибкой.
+Функции репозитория, которые проверяются только интеграционными тестами,
+тогда могут показывать `0.0%`: их код не выполнялся. Это не означает,
+что тестов для них нет. Покрытие отражает последний запуск, создавший
+`coverage.out`; для оценки с учётом интеграций используйте команду выше.
 
 Интеграционные тесты используют временные таблицы либо отдельные таблицы
 со случайным префиксом и удаляют их после проверки. Для задач, истории

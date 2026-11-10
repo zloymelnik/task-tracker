@@ -276,7 +276,7 @@ func (s *TaskService) Update(ctx context.Context, actorID, taskID uuid.UUID, inp
 		if input.Version != task.Version {
 			return fmt.Errorf("update task: %w", domain.ErrTaskVersionConflict)
 		}
-		if err := checkUpdateFieldPermissions(actorID, *task, input); err != nil {
+		if err := checkUpdateFieldPermissions(actorID, actor.Role, *task, input); err != nil {
 			return fmt.Errorf("update task: %w", err)
 		}
 		title := task.Title
@@ -410,7 +410,10 @@ func validateRole(role domain.TeamRole) error {
 	return nil
 }
 
-func checkUpdateFieldPermissions(actorID uuid.UUID, task domain.Task, input UpdateTaskInput) error {
+func checkUpdateFieldPermissions(actorID uuid.UUID, role domain.TeamRole, task domain.Task, input UpdateTaskInput) error {
+	if role == domain.OwnerRole || role == domain.AdminRole {
+		return nil
+	}
 	isAuthor := actorID == task.CreatedBy
 	isAssignee := task.AssigneeID != nil && actorID == *task.AssigneeID
 	if !isAuthor {
