@@ -9,9 +9,10 @@ import (
 )
 
 type Service struct {
-	Auth *AuthService
-	Team *TeamService
-	Task *TaskService
+	Auth  *AuthService
+	Team  *TeamService
+	Task  *TaskService
+	Stats *StatsService
 }
 
 type TransactionManager interface {
@@ -32,5 +33,6 @@ func NewService(cfg *config.Config, repository *mysql.Repository, cache Cache, l
 			NewTaskCacheOptions(cfg.Redis),
 			log,
 		),
+		Stats: NewStatsService(repository.TeamStats, repository.TeamMember, log),
 	}
 }
