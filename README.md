@@ -202,17 +202,40 @@ JSON встроен через `go:embed`: изменение файла без 
 
 ### Стек и структура
 
-| Компонент | Технология |
-|-----------|------------|
-| Язык | Go 1.26.11 |
-| HTTP-маршрутизация | chi v5, стандартный `net/http` |
-| Хранение данных | MySQL 8.4, sqlx, go-sql-driver/mysql |
-| Кеш и объединение загрузок | Redis 7, go-redis v9, singleflight |
-| Авторизация | golang-jwt/jwt v5, bcrypt |
-| Конфигурация и логи | cleanenv, log/slog |
-| Миграции | golang-migrate v4.18.2 |
-| Документация | swag v1.16.4, http-swagger v2 |
-| Окружение и проверки | Docker Compose, Air, golangci-lint v2.10.1, GitHub Actions |
+Сервис написан на Go 1.26.11, использует MySQL 8.4 и Redis 7.
+HTTP-сервер и структурированные логи построены на стандартных `net/http`
+и `log/slog`.
+
+Основные прямые зависимости и их назначение:
+
+| Пакет | Зачем используется |
+|-------|--------------------|
+| `github.com/go-chi/chi/v5` | Маршрутизация HTTP и подключение middleware |
+| `github.com/go-sql-driver/mysql` | Драйвер подключения к MySQL |
+| `github.com/jmoiron/sqlx` | Выполнение SQL и чтение результатов в структуры |
+| `github.com/redis/go-redis/v9` | Подключение к Redis и операции кеша |
+| `github.com/golang-jwt/jwt/v5` | Создание и проверка JWT |
+| `golang.org/x/crypto/bcrypt` | Хеширование и проверка паролей |
+| `golang.org/x/sync/singleflight` | Объединение одновременных загрузок одной страницы внутри экземпляра приложения |
+| `github.com/google/uuid` | Создание и разбор UUID |
+| `github.com/ilyakaznacheev/cleanenv` | Чтение конфигурации из YAML и окружения |
+| `github.com/avast/retry-go` | Повторные попытки подключения к MySQL и Redis при запуске |
+| `github.com/swaggo/http-swagger/v2` | Отображение спецификации API через Swagger UI |
+
+Точные версии библиотек зафиксированы в [go.mod](go.mod).
+Транзитивные зависимости (`// indirect`) здесь не перечислены.
+
+Инструменты разработки и запуска:
+
+| Инструмент | Назначение |
+|------------|------------|
+| Docker Compose | Запуск приложения, MySQL, Redis и production-миграций |
+| Air | Пересборка и перезапуск приложения при изменении исходников в разработке |
+| golang-migrate v4.18.2 | Применение и откат SQL-миграций |
+| swag v1.16.4 | Генерация Swagger-спецификации из аннотаций Go |
+| golangci-lint v2.10.1 | Проверка кода линтерами |
+| govulncheck | Проверка известных уязвимостей в зависимостях и используемом коде |
+| GitHub Actions | Автоматический запуск проверок при push и pull request |
 
 ```text
 cmd/task-tracker/      Точка входа
