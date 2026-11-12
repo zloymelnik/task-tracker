@@ -33,4 +33,4 @@ redis:
     delay: 2s
 
 docs:
-  enabled: true
+  enabled: false

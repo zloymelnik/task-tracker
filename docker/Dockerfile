@@ -3,7 +3,7 @@
 # -------------------------------------------------------------
 # Base: current version of Go on Alpine
 # -------------------------------------------------------------
-FROM golang:1.26.10-alpine AS base
+FROM golang:1.26.11-alpine AS base
 
 WORKDIR /app
 
