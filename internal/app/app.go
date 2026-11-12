@@ -37,7 +37,7 @@ func NewApp(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, er
 	cache := redisstorage.NewCache(redisClient, cfg.Redis.MaxRequestTime, log)
 	services := service.NewService(cfg, repo, cache, log)
 	handlers := handler.New(services, log)
-	router := NewRouter(handlers, services.Auth, log)
+	router := NewRouter(handlers, cfg.Docs.Enabled, services.Auth, log)
 
 	a := &App{
 		server: &http.Server{

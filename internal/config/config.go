@@ -25,6 +25,7 @@ type Config struct {
 	DB     DB     `yaml:"mysql"`
 	Auth   Auth   `yaml:"auth"`
 	Redis  Redis  `yaml:"redis"`
+	Docs   Docs   `yaml:"docs"`
 }
 
 // Server holds HTTP server tuning parameters.
@@ -83,6 +84,10 @@ type Redis struct {
 type RedisRetry struct {
 	MaxAttempts int           `yaml:"max_attempts" env:"REDIS_RETRY_MAX_ATTEMPTS"`
 	Delay       time.Duration `yaml:"delay"        env:"REDIS_RETRY_DELAY"`
+}
+
+type Docs struct {
+	Enabled bool `yaml:"enabled" env:"DOCS_ENABLED"`
 }
 
 func LoadConfig(path string) (*Config, error) {

@@ -35,5 +35,14 @@ migrate-up: ## Применить все миграции
 migrate-down: ## Откатить последнюю миграцию
 	migrate -path migrations -database "mysql://$(DB_USER):$(DB_PASSWORD)@tcp($(DB_HOST):$(DB_PORT))/$(DB_NAME)" down 1
 
-swag: ## Сгенерировать документацию Swagger/OpenAPI
-	swag init -g cmd/task-tracker/main.go -o api/openapi
+swag: ## Сгенерировать Swagger/OpenAPI и собрать приложение в tmp/main
+	swag init -g cmd/task-tracker/main.go \
+		--parseInternal \
+		--outputTypes json,yaml \
+		-o api/openapi
+	mkdir -p tmp
+	go build -o ./tmp/main ./cmd/task-tracker
+	# Trigger a WRITE event for Air even if its running configuration predates the JSON watcher.
+	cp api/openapi/embed.go tmp/openapi-embed.txt
+	cat tmp/openapi-embed.txt > api/openapi/embed.go
+	rm tmp/openapi-embed.txt

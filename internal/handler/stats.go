@@ -27,6 +27,19 @@ func NewStatsHandler(s StatsService, log *slog.Logger) *StatsHandler {
 	}
 }
 
+// Get returns team statistics.
+// @Summary Статистика команды
+// @Description Возвращает отчёт только по указанной команде. Доступ имеют её owner и admin. Показывает кол-во задач по всем статусам, среднее время закрытия задачи, топ 3 пользователя по закрытым задачам в течении последних 30 дней и общее кол-во комментариев к задачам команды.
+// @Tags statistics
+// @Produce json
+// @Security BearerAuth
+// @Param team_id path string true "UUID команды" Format(uuid)
+// @Success 200 {object} TeamStatsResponse
+// @Failure 400 {object} errorResponse
+// @Failure 401 {object} errorResponse
+// @Failure 403 {object} errorResponse
+// @Failure 500 {object} errorResponse
+// @Router /teams/{team_id}/stats [get]
 func (h *StatsHandler) Get(w http.ResponseWriter, r *http.Request) {
 	userID, ok := UserIDFromContext(r.Context())
 	if !ok {

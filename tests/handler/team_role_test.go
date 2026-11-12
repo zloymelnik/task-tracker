@@ -63,7 +63,7 @@ func roleRouter(s handler.TeamService, log *slog.Logger) http.Handler {
 		Auth:   handler.NewAuthHandler(parser, log),
 		Team:   handler.NewTeamHandler(s, log),
 	}
-	return app.NewRouter(h, parser, log)
+	return app.NewRouter(h, false, parser, log)
 }
 
 func TestUpdateRoleRouteSuccess(t *testing.T) {

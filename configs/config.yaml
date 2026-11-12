@@ -31,3 +31,6 @@ redis:
   retry:
     max_attempts: 10
     delay: 2s
+
+docs:
+  enabled: true

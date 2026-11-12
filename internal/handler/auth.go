@@ -27,6 +27,18 @@ func NewAuthHandler(s AuthService, log *slog.Logger) *AuthHandler {
 	}
 }
 
+// Register creates a user.
+// @Summary Регистрация пользователя
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body RegisterRequest true "Данные регистрации"
+// @Success 201 {object} UserResponse
+// @Failure 400 {object} errorResponse
+// @Failure 409 {object} errorResponse
+// @Failure 413 {object} errorResponse
+// @Failure 500 {object} errorResponse
+// @Router /register [post]
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var rawUser RegisterRequest
 	if err := decodeJSON(w, r, &rawUser); err != nil {
@@ -53,6 +65,19 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	h.log.Info("User registered successfully", "email", user.Email, "name", user.Name, "id", user.ID)
 }
 
+// Login creates a user's access token.
+// @Summary Вход пользователя
+// @Description Возвращает JWT в поле token. Для защищённых запросов передавайте Authorization: Bearer <JWT>.
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body LoginRequest true "Данные входа"
+// @Success 200 {object} LoginResponse
+// @Failure 400 {object} errorResponse
+// @Failure 401 {object} errorResponse
+// @Failure 413 {object} errorResponse
+// @Failure 500 {object} errorResponse
+// @Router /login [post]
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var rawUser LoginRequest
 	if err := decodeJSON(w, r, &rawUser); err != nil {

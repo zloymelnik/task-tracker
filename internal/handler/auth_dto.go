@@ -9,21 +9,23 @@ import (
 )
 
 type RegisterRequest struct {
-	Email    string `json:"email"`
-	Name     string `json:"name"`
-	Password string `json:"password"`
+	Email string `json:"email" binding:"required" format:"email" example:"user@example.com"`
+	Name  string `json:"name" binding:"required" minLength:"1" maxLength:"255" example:"Иван"`
+	// Password must contain between 1 and 72 bytes.
+	Password string `json:"password" binding:"required" format:"password" example:"test-password-123"`
 }
 
 type UserResponse struct {
-	ID        uuid.UUID `json:"id"`
+	ID        uuid.UUID `json:"id" format:"uuid"`
 	Email     string    `json:"email"`
 	Name      string    `json:"name"`
-	CreatedAt time.Time `json:"created_at"`
+	CreatedAt time.Time `json:"created_at" format:"date-time"`
 }
 
 type LoginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email string `json:"email" binding:"required" format:"email" example:"user@example.com"`
+	// Password must contain between 1 and 72 bytes.
+	Password string `json:"password" binding:"required" format:"password" example:"test-password-123"`
 }
 
 type LoginResponse struct {

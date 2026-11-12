@@ -1,0 +1,1051 @@
+basePath: /api/v1
+definitions:
+  domain.FieldChange:
+    properties:
+      new: {}
+      old: {}
+    type: object
+  domain.TaskChanges:
+    additionalProperties:
+      $ref: '#/definitions/domain.FieldChange'
+    type: object
+  domain.TaskStatus:
+    enum:
+    - todo
+    - in_progress
+    - done
+    type: string
+    x-enum-varnames:
+    - Todo
+    - InProgress
+    - Done
+  handler.AssigneeStatsResponse:
+    properties:
+      closed_tasks:
+        type: integer
+      name:
+        type: string
+      user_id:
+        format: uuid
+        type: string
+    type: object
+  handler.CreateTaskCommentRequest:
+    properties:
+      body:
+        description: Body must contain non-whitespace text and be at most 65535 bytes.
+        example: Отчёт готов к проверке
+        minLength: 1
+        type: string
+    required:
+    - body
+    type: object
+  handler.CreateTaskRequest:
+    properties:
+      assignee_id:
+        format: uuid
+        type: string
+        x-nullable: true
+      description:
+        type: string
+      team_id:
+        format: uuid
+        type: string
+      title:
+        example: Подготовить отчёт
+        maxLength: 255
+        minLength: 1
+        type: string
+    required:
+    - team_id
+    - title
+    type: object
+  handler.CreateTaskResponse:
+    properties:
+      assignee_id:
+        format: uuid
+        type: string
+        x-nullable: true
+      closed_at:
+        format: date-time
+        type: string
+        x-nullable: true
+      created_at:
+        format: date-time
+        type: string
+      created_by:
+        format: uuid
+        type: string
+      description:
+        type: string
+      id:
+        format: uuid
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/domain.TaskStatus'
+        enum:
+        - todo
+        - in_progress
+        - done
+      team_id:
+        format: uuid
+        type: string
+      title:
+        type: string
+      updated_at:
+        format: date-time
+        type: string
+      version:
+        maximum: 4294967295
+        minimum: 1
+        type: integer
+    type: object
+  handler.CreateTeamRequest:
+    properties:
+      name:
+        example: Моя команда
+        maxLength: 255
+        minLength: 1
+        type: string
+    required:
+    - name
+    type: object
+  handler.CreateTeamResponse:
+    properties:
+      created_at:
+        format: date-time
+        type: string
+      created_by:
+        format: uuid
+        type: string
+      id:
+        format: uuid
+        type: string
+      name:
+        type: string
+    type: object
+  handler.InviteUserRequest:
+    properties:
+      email:
+        example: member@example.com
+        format: email
+        type: string
+      role:
+        enum:
+        - admin
+        - member
+        example: member
+        type: string
+    required:
+    - email
+    - role
+    type: object
+  handler.InviteUserResponse:
+    properties:
+      joined_at:
+        format: date-time
+        type: string
+      role:
+        type: string
+      team_id:
+        format: uuid
+        type: string
+      user_id:
+        format: uuid
+        type: string
+    type: object
+  handler.ListTaskCommentsResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/handler.TaskCommentResponse'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      total:
+        type: integer
+    type: object
+  handler.ListTaskHistoryResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/handler.TaskHistoryResponse'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      total:
+        type: integer
+    type: object
+  handler.ListTasksResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/handler.CreateTaskResponse'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      total:
+        type: integer
+    type: object
+  handler.ListTeamsResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/handler.CreateTeamResponse'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      total:
+        type: integer
+    type: object
+  handler.LoginRequest:
+    properties:
+      email:
+        example: user@example.com
+        format: email
+        type: string
+      password:
+        description: Password must contain between 1 and 72 bytes.
+        example: test-password-123
+        format: password
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  handler.LoginResponse:
+    properties:
+      token:
+        type: string
+    type: object
+  handler.RegisterRequest:
+    properties:
+      email:
+        example: user@example.com
+        format: email
+        type: string
+      name:
+        example: Иван
+        maxLength: 255
+        minLength: 1
+        type: string
+      password:
+        description: Password must contain between 1 and 72 bytes.
+        example: test-password-123
+        format: password
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  handler.TaskCommentResponse:
+    properties:
+      body:
+        type: string
+      created_at:
+        format: date-time
+        type: string
+      created_by:
+        format: uuid
+        type: string
+      id:
+        format: uuid
+        type: string
+      task_id:
+        format: uuid
+        type: string
+    type: object
+  handler.TaskHistoryResponse:
+    properties:
+      changed_by:
+        format: uuid
+        type: string
+      changes:
+        $ref: '#/definitions/domain.TaskChanges'
+      created_at:
+        format: date-time
+        type: string
+      id:
+        format: uuid
+        type: string
+      task_id:
+        format: uuid
+        type: string
+    type: object
+  handler.TaskStatusCountsResponse:
+    properties:
+      done:
+        type: integer
+      in_progress:
+        type: integer
+      todo:
+        type: integer
+    type: object
+  handler.TeamStatsResponse:
+    properties:
+      average_close_seconds:
+        type: number
+        x-nullable: true
+      comments_count:
+        type: integer
+      tasks_by_status:
+        $ref: '#/definitions/handler.TaskStatusCountsResponse'
+      team_id:
+        format: uuid
+        type: string
+      top_assignees:
+        items:
+          $ref: '#/definitions/handler.AssigneeStatsResponse'
+        type: array
+    type: object
+  handler.UpdateRoleRequest:
+    properties:
+      role:
+        enum:
+        - admin
+        - member
+        example: admin
+        type: string
+    required:
+    - role
+    type: object
+  handler.UpdateTaskRequest:
+    properties:
+      assignee_id:
+        format: uuid
+        type: string
+        x-nullable: true
+      description:
+        type: string
+        x-nullable: true
+      status:
+        allOf:
+        - $ref: '#/definitions/domain.TaskStatus'
+        enum:
+        - todo
+        - in_progress
+        - done
+        x-nullable: true
+      title:
+        maxLength: 255
+        minLength: 1
+        type: string
+        x-nullable: true
+      version:
+        example: 1
+        maximum: 4294967294
+        minimum: 1
+        type: integer
+    required:
+    - version
+    type: object
+  handler.UserResponse:
+    properties:
+      created_at:
+        format: date-time
+        type: string
+      email:
+        type: string
+      id:
+        format: uuid
+        type: string
+      name:
+        type: string
+    type: object
+  handler.errorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: Управление командами, задачами и статистикой.
+  title: Task Tracker API
+  version: "1.0"
+paths:
+  /health:
+    get:
+      description: Возвращает OK, если HTTP-сервер обрабатывает запросы. Подключения
+        к MySQL и Redis не проверяет.
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Статус сервиса
+      tags:
+      - health
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: 'Возвращает JWT в поле token. Для защищённых запросов передавайте
+        Authorization: Bearer <JWT>.'
+      parameters:
+      - description: Данные входа
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      summary: Вход пользователя
+      tags:
+      - auth
+  /register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Данные регистрации
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      summary: Регистрация пользователя
+      tags:
+      - auth
+  /tasks:
+    get:
+      description: Требуется членство в команде. Фильтры применяются одновременно
+        (AND).
+      parameters:
+      - description: UUID команды
+        format: uuid
+        in: query
+        name: team_id
+        required: true
+        type: string
+      - description: Статус задачи
+        enum:
+        - todo
+        - in_progress
+        - done
+        in: query
+        name: status
+        type: string
+      - description: UUID исполнителя
+        format: uuid
+        in: query
+        name: assignee_id
+        type: string
+      - default: 20
+        description: Размер страницы
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: Смещение
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ListTasksResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Список задач команды
+      tags:
+      - tasks
+    post:
+      consumes:
+      - application/json
+      description: Создавать задачу может любой участник команды; исполнитель должен
+        состоять в той же команде; начальные значения — todo и version = 1
+      parameters:
+      - description: Данные задачи
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.CreateTaskResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Создание задачи
+      tags:
+      - tasks
+  /tasks/{id}:
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Требуется членство в команде. Owner и admin могут менять любые задачи команды.
+        Автор задачи может менять название, описание, статус и исполнителя; исполнитель без прав автора — только статус.
+        Поле version обязательно: при несовпадении с текущей версией возвращается 409.
+        Отсутствующие поля сохраняются. assignee_id: UUID — назначить участника команды, null — снять исполнителя.
+        Фактические изменения увеличивают version и сохраняются вместе с историей в одной транзакции.
+        Запрос без изменений возвращает текущую задачу без увеличения версии и новой записи истории.
+        Для title, description и status значение null трактуется как отсутствие поля. Для очистки описания передайте пустую строку.
+      parameters:
+      - description: Доступные для изменения данные задачи
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateTaskRequest'
+      - description: UUID задачи
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.CreateTaskResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Обновление задачи
+      tags:
+      - tasks
+  /tasks/{id}/comments:
+    get:
+      description: 'Доступен участникам команды задачи. Возвращает страницу с общим
+        количеством комментариев; порядок — created_at DESC, id DESC. Пустой список
+        возвращается как items: [].'
+      parameters:
+      - description: UUID задачи
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 20
+        description: Размер страницы
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: Смещение
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ListTaskCommentsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Список комментариев задачи
+      tags:
+      - tasks
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Доступно участникам команды задачи. Автор определяется по JWT. Текст не может состоять только из пробелов; максимум — 65535 байт при общем лимите JSON-запроса 64 КиБ.
+        Добавление комментария не изменяет версию задачи и не создаёт запись в истории изменений.
+      parameters:
+      - description: UUID задачи
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Текст комментария
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateTaskCommentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.TaskCommentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Добавление комментария к задаче
+      tags:
+      - tasks
+  /tasks/{id}/history:
+    get:
+      description: Доступна участникам команды задачи. Возвращает старые и новые значения,
+        автора и время изменений; порядок — created_at DESC, id DESC.
+      parameters:
+      - description: UUID задачи
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 20
+        description: Размер страницы
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: Смещение
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ListTaskHistoryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: История изменений задачи
+      tags:
+      - tasks
+  /teams:
+    get:
+      parameters:
+      - default: 20
+        description: Размер страницы
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: Смещение
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ListTeamsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Посмотреть пагинируемый список своих команд
+      tags:
+      - team
+    post:
+      consumes:
+      - application/json
+      description: Создатель автоматически становится владельцем команды.
+      parameters:
+      - description: Название новой команды
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateTeamRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.CreateTeamResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Создание команды
+      tags:
+      - team
+  /teams/{id}/invite:
+    post:
+      consumes:
+      - application/json
+      description: Приглашать могут owner/admin, пользователь должен быть зарегистрирован,
+        допустимые роли — admin и member.
+      parameters:
+      - description: Email и роль пользователя
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.InviteUserRequest'
+      - description: UUID команды
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.InviteUserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Добавление пользователя в команду
+      tags:
+      - team
+  /teams/{id}/members/{user_id}/role:
+    patch:
+      consumes:
+      - application/json
+      description: Изменять роль могут только owner, пользователь должен быть зарегистрирован,
+        допустимые роли — admin и member. Роль owner менять нельзя.
+      parameters:
+      - description: Роль пользователя
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateRoleRequest'
+      - description: UUID команды
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: UUID пользователя
+        format: uuid
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Роль обновлена
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Изменение роли пользователя
+      tags:
+      - team
+  /teams/{team_id}/stats:
+    get:
+      description: Возвращает отчёт только по указанной команде. Доступ имеют её owner
+        и admin. Показывает кол-во задач по всем статусам, среднее время закрытия
+        задачи, топ 3 пользователя по закрытым задачам в течении последних 30 дней
+        и общее кол-во комментариев к задачам команды.
+      parameters:
+      - description: UUID команды
+        format: uuid
+        in: path
+        name: team_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.TeamStatsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Статистика команды
+      tags:
+      - statistics
+securityDefinitions:
+  BearerAuth:
+    description: Введите Bearer и JWT через пробел.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

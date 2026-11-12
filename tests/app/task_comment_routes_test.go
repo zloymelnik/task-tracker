@@ -98,7 +98,7 @@ func TestCommentRoutes(t *testing.T) {
 				}
 				h := handler.New(&service.Service{Auth: parser}, log)
 				h.Task = handler.NewTaskHandler(s, log)
-				router := app.NewRouter(h, parser, log)
+				router := app.NewRouter(h, false, parser, log)
 				id, query, body, requestMethod := task.String(), "limit=5&offset=10&id="+uuid.NewString(), `{"body":"Комментарий","created_by":"`+uuid.NewString()+`"}`, method
 				if tt.name == "invalid ID" {
 					id = "invalid"

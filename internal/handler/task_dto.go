@@ -11,10 +11,10 @@ import (
 )
 
 type CreateTaskRequest struct {
-	TeamID      uuid.UUID  `json:"team_id"`
-	Title       string     `json:"title"`
+	TeamID      uuid.UUID  `json:"team_id" binding:"required" format:"uuid"`
+	Title       string     `json:"title" binding:"required" minLength:"1" maxLength:"255" example:"Подготовить отчёт"`
 	Description string     `json:"description"`
-	AssigneeID  *uuid.UUID `json:"assignee_id"`
+	AssigneeID  *uuid.UUID `json:"assignee_id" format:"uuid" extensions:"x-nullable"`
 }
 
 func (r CreateTaskRequest) ToInput() service.CreateTaskInput {
@@ -27,17 +27,17 @@ func (r CreateTaskRequest) ToInput() service.CreateTaskInput {
 }
 
 type CreateTaskResponse struct {
-	ID          uuid.UUID         `json:"id"`
-	TeamID      uuid.UUID         `json:"team_id"`
-	CreatedBy   uuid.UUID         `json:"created_by"`
-	AssigneeID  *uuid.UUID        `json:"assignee_id"`
+	ID          uuid.UUID         `json:"id" format:"uuid"`
+	TeamID      uuid.UUID         `json:"team_id" format:"uuid"`
+	CreatedBy   uuid.UUID         `json:"created_by" format:"uuid"`
+	AssigneeID  *uuid.UUID        `json:"assignee_id" format:"uuid" extensions:"x-nullable"`
 	Title       string            `json:"title"`
 	Description string            `json:"description"`
-	Status      domain.TaskStatus `json:"status"`
-	CreatedAt   time.Time         `json:"created_at"`
-	UpdatedAt   time.Time         `json:"updated_at"`
-	ClosedAt    *time.Time        `json:"closed_at"`
-	Version     uint32            `json:"version"`
+	Status      domain.TaskStatus `json:"status" enums:"todo,in_progress,done"`
+	CreatedAt   time.Time         `json:"created_at" format:"date-time"`
+	UpdatedAt   time.Time         `json:"updated_at" format:"date-time"`
+	ClosedAt    *time.Time        `json:"closed_at" format:"date-time" extensions:"x-nullable"`
+	Version     uint32            `json:"version" minimum:"1" maximum:"4294967295"`
 }
 
 func NewCreateTaskResponse(task domain.Task) CreateTaskResponse {
@@ -77,11 +77,11 @@ func NewCreateTaskListResponse(tasks []domain.Task, total, limit, offset int) Li
 }
 
 type UpdateTaskRequest struct {
-	Version     uint32             `json:"version"`
-	Title       *string            `json:"title"`
-	Description *string            `json:"description"`
-	Status      *domain.TaskStatus `json:"status"`
-	AssigneeID  json.RawMessage    `json:"assignee_id"`
+	Version     uint32             `json:"version" binding:"required" minimum:"1" maximum:"4294967294" example:"1"`
+	Title       *string            `json:"title" minLength:"1" maxLength:"255" extensions:"x-nullable"`
+	Description *string            `json:"description" extensions:"x-nullable"`
+	Status      *domain.TaskStatus `json:"status" enums:"todo,in_progress,done" extensions:"x-nullable"`
+	AssigneeID  json.RawMessage    `json:"assignee_id" swaggertype:"string" format:"uuid" extensions:"x-nullable"`
 }
 
 func (r UpdateTaskRequest) ToInput() (service.UpdateTaskInput, error) {

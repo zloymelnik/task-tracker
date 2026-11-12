@@ -19,7 +19,7 @@ import (
 func TestHealthRout(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	h := handler.New(&service.Service{}, log)
-	r := app.NewRouter(h, nil, log)
+	r := app.NewRouter(h, false, nil, log)
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/health", nil)
 	rec := httptest.NewRecorder()
 	r.ServeHTTP(rec, req)
@@ -68,7 +68,7 @@ func TestAuthRoutes(t *testing.T) {
 				Auth: handler.NewAuthHandler(stub, log),
 				Team: handler.NewTeamHandler(teamStub, log),
 			}
-			router := app.NewRouter(h, nil, log)
+			router := app.NewRouter(h, false, nil, log)
 			rec := httptest.NewRecorder()
 			router.ServeHTTP(rec, httptest.NewRequest(tt.method, tt.path, strings.NewReader(`{}`)))
 			if rec.Code != tt.status || stub.registerCalls != tt.registerCalls || stub.loginCalls != tt.loginCalls {

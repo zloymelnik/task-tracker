@@ -34,6 +34,21 @@ func NewTaskHandler(s TaskService, log *slog.Logger) *TaskHandler {
 	}
 }
 
+// Create creates a new task.
+// @Summary Создание задачи
+// @Description Создавать задачу может любой участник команды; исполнитель должен состоять в той же команде; начальные значения — todo и version = 1
+// @Tags tasks
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param request body CreateTaskRequest true "Данные задачи"
+// @Success 201 {object} CreateTaskResponse
+// @Failure 400 {object} errorResponse
+// @Failure 401 {object} errorResponse
+// @Failure 403 {object} errorResponse
+// @Failure 413 {object} errorResponse
+// @Failure 500 {object} errorResponse
+// @Router /tasks [post]
 func (h *TaskHandler) Create(w http.ResponseWriter, r *http.Request) {
 	userID, ok := UserIDFromContext(r.Context())
 	if !ok {
@@ -65,6 +80,23 @@ func (h *TaskHandler) Create(w http.ResponseWriter, r *http.Request) {
 	h.log.Info("Task created successfully", "id", task.ID, "title", task.Title)
 }
 
+// List gets list of tasks.
+// @Summary Список задач команды
+// @Description Требуется членство в команде. Фильтры применяются одновременно (AND).
+// @Tags tasks
+// @Security BearerAuth
+// @Produce json
+// @Param team_id query string true "UUID команды" Format(uuid)
+// @Param status query string false "Статус задачи" Enums(todo,in_progress,done)
+// @Param assignee_id query string false "UUID исполнителя" Format(uuid)
+// @Param limit query int false "Размер страницы" default(20) minimum(1) maximum(100)
+// @Param offset query int false "Смещение" default(0) minimum(0)
+// @Success 200 {object} ListTasksResponse
+// @Failure 400 {object} errorResponse
+// @Failure 401 {object} errorResponse
+// @Failure 403 {object} errorResponse
+// @Failure 500 {object} errorResponse
+// @Router /tasks [get]
 func (h *TaskHandler) List(w http.ResponseWriter, r *http.Request) {
 	userID, ok := UserIDFromContext(r.Context())
 	if !ok {
@@ -134,6 +166,30 @@ func (h *TaskHandler) List(w http.ResponseWriter, r *http.Request) {
 	h.log.Info("Gets task list successfully", "total", total, "filter", filter)
 }
 
+// Update changes task data.
+// @Summary Обновление задачи
+// @Description Требуется членство в команде. Owner и admin могут менять любые задачи команды.
+// @Description Автор задачи может менять название, описание, статус и исполнителя; исполнитель без прав автора — только статус.
+// @Description Поле version обязательно: при несовпадении с текущей версией возвращается 409.
+// @Description Отсутствующие поля сохраняются. assignee_id: UUID — назначить участника команды, null — снять исполнителя.
+// @Description Фактические изменения увеличивают version и сохраняются вместе с историей в одной транзакции.
+// @Description Запрос без изменений возвращает текущую задачу без увеличения версии и новой записи истории.
+// @Description Для title, description и status значение null трактуется как отсутствие поля. Для очистки описания передайте пустую строку.
+// @Tags tasks
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param request body UpdateTaskRequest true "Доступные для изменения данные задачи"
+// @Param id path string true "UUID задачи" Format(uuid)
+// @Success 200 {object} CreateTaskResponse
+// @Failure 400 {object} errorResponse
+// @Failure 401 {object} errorResponse
+// @Failure 403 {object} errorResponse
+// @Failure 404 {object} errorResponse
+// @Failure 409 {object} errorResponse
+// @Failure 413 {object} errorResponse
+// @Failure 500 {object} errorResponse
+// @Router /tasks/{id} [put]
 func (h *TaskHandler) Update(w http.ResponseWriter, r *http.Request) {
 	actorID, ok := UserIDFromContext(r.Context())
 	if !ok {
@@ -178,6 +234,22 @@ func (h *TaskHandler) Update(w http.ResponseWriter, r *http.Request) {
 	h.log.Info("Task update successfully", "id", task.ID, "task", task)
 }
 
+// History returns task change history.
+// @Summary История изменений задачи
+// @Description Доступна участникам команды задачи. Возвращает старые и новые значения, автора и время изменений; порядок — created_at DESC, id DESC.
+// @Tags tasks
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "UUID задачи" Format(uuid)
+// @Param limit query int false "Размер страницы" default(20) minimum(1) maximum(100)
+// @Param offset query int false "Смещение" default(0) minimum(0)
+// @Success 200 {object} ListTaskHistoryResponse
+// @Failure 400 {object} errorResponse
+// @Failure 401 {object} errorResponse
+// @Failure 403 {object} errorResponse
+// @Failure 404 {object} errorResponse
+// @Failure 500 {object} errorResponse
+// @Router /tasks/{id}/history [get]
 func (h *TaskHandler) History(w http.ResponseWriter, r *http.Request) {
 	userID, ok := UserIDFromContext(r.Context())
 	if !ok {
@@ -232,6 +304,24 @@ func (h *TaskHandler) History(w http.ResponseWriter, r *http.Request) {
 	h.log.Info("Gets task history successfully", "total", total, "filter", filter)
 }
 
+// AddComment creates a task comment.
+// @Summary Добавление комментария к задаче
+// @Description Доступно участникам команды задачи. Автор определяется по JWT. Текст не может состоять только из пробелов; максимум — 65535 байт при общем лимите JSON-запроса 64 КиБ.
+// @Description Добавление комментария не изменяет версию задачи и не создаёт запись в истории изменений.
+// @Tags tasks
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "UUID задачи" Format(uuid)
+// @Param request body CreateTaskCommentRequest true "Текст комментария"
+// @Success 201 {object} TaskCommentResponse
+// @Failure 400 {object} errorResponse
+// @Failure 401 {object} errorResponse
+// @Failure 403 {object} errorResponse
+// @Failure 404 {object} errorResponse
+// @Failure 413 {object} errorResponse
+// @Failure 500 {object} errorResponse
+// @Router /tasks/{id}/comments [post]
 func (h *TaskHandler) AddComment(w http.ResponseWriter, r *http.Request) {
 	userID, ok := UserIDFromContext(r.Context())
 	if !ok {
@@ -268,6 +358,22 @@ func (h *TaskHandler) AddComment(w http.ResponseWriter, r *http.Request) {
 	h.log.Info("Task comment created successfully", "taskID", taskID, "userID", userID, "comment", commentInput)
 }
 
+// Comments returns task comments.
+// @Summary Список комментариев задачи
+// @Description Доступен участникам команды задачи. Возвращает страницу с общим количеством комментариев; порядок — created_at DESC, id DESC. Пустой список возвращается как items: [].
+// @Tags tasks
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "UUID задачи" Format(uuid)
+// @Param limit query int false "Размер страницы" default(20) minimum(1) maximum(100)
+// @Param offset query int false "Смещение" default(0) minimum(0)
+// @Success 200 {object} ListTaskCommentsResponse
+// @Failure 400 {object} errorResponse
+// @Failure 401 {object} errorResponse
+// @Failure 403 {object} errorResponse
+// @Failure 404 {object} errorResponse
+// @Failure 500 {object} errorResponse
+// @Router /tasks/{id}/comments [get]
 func (h *TaskHandler) Comments(w http.ResponseWriter, r *http.Request) {
 	userID, ok := UserIDFromContext(r.Context())
 	if !ok {

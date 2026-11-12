@@ -8,11 +8,11 @@ import (
 )
 
 type TaskHistoryResponse struct {
-	ID        uuid.UUID          `json:"id"`
-	TaskID    uuid.UUID          `json:"task_id"`
-	ChangedBy uuid.UUID          `json:"changed_by"`
+	ID        uuid.UUID          `json:"id" format:"uuid"`
+	TaskID    uuid.UUID          `json:"task_id" format:"uuid"`
+	ChangedBy uuid.UUID          `json:"changed_by" format:"uuid"`
 	Changes   domain.TaskChanges `json:"changes"`
-	CreatedAt time.Time          `json:"created_at"`
+	CreatedAt time.Time          `json:"created_at" format:"date-time"`
 }
 
 type ListTaskHistoryResponse struct {

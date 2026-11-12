@@ -72,7 +72,7 @@ func TestListTeamsRoute(t *testing.T) {
 				return []domain.Team{}, 42, nil
 			})
 			h := &handler.Handler{Auth: handler.NewAuthHandler(parser, log), Team: handler.NewTeamHandler(s, log)}
-			router := app.NewRouter(h, parser, log)
+			router := app.NewRouter(h, false, parser, log)
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/teams?limit=5&offset=10&user_id="+uuid.NewString(), nil)
 			if tokenKind != "missing" {
 				token := "invalid-token"
@@ -143,7 +143,7 @@ func TestCreateTeamRoute(t *testing.T) {
 				Auth: handler.NewAuthHandler(parser, log),
 				Team: handler.NewTeamHandler(s, log),
 			}
-			router := app.NewRouter(h, parser, log)
+			router := app.NewRouter(h, false, parser, log)
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/teams", strings.NewReader(`{"name":"Team"}`))
 			if tt.tokenKind != "missing" {
 				token := "invalid-token"

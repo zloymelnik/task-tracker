@@ -87,7 +87,7 @@ func TestListTasksRoute(t *testing.T) {
 			})
 			h := handler.New(&service.Service{Auth: parser}, log)
 			h.Task = handler.NewTaskHandler(s, log)
-			router := app.NewRouter(h, parser, log)
+			router := app.NewRouter(h, false, parser, log)
 			path := "/api/v1/tasks?team_id=" + team.String() + "&limit=5&offset=10"
 			if tt.name == "bad query" {
 				path += "&assignee_id=invalid"
@@ -184,7 +184,7 @@ func TestCreateTaskRoute(t *testing.T) {
 			})
 			h := handler.New(&service.Service{Auth: parser}, log)
 			h.Task = handler.NewTaskHandler(s, log)
-			router := app.NewRouter(h, parser, log)
+			router := app.NewRouter(h, false, parser, log)
 			method := http.MethodPost
 			if tt.name == "wrong method" {
 				method = http.MethodPut

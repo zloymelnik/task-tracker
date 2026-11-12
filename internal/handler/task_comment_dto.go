@@ -9,7 +9,8 @@ import (
 )
 
 type CreateTaskCommentRequest struct {
-	Body string `json:"body"`
+	// Body must contain non-whitespace text and be at most 65535 bytes.
+	Body string `json:"body" binding:"required" minLength:"1" example:"Отчёт готов к проверке"`
 }
 
 func (r CreateTaskCommentRequest) ToInput() service.CreateTaskCommentInput {
@@ -19,11 +20,11 @@ func (r CreateTaskCommentRequest) ToInput() service.CreateTaskCommentInput {
 }
 
 type TaskCommentResponse struct {
-	ID        uuid.UUID `json:"id"`
-	TaskID    uuid.UUID `json:"task_id"`
-	CreatedBy uuid.UUID `json:"created_by"`
+	ID        uuid.UUID `json:"id" format:"uuid"`
+	TaskID    uuid.UUID `json:"task_id" format:"uuid"`
+	CreatedBy uuid.UUID `json:"created_by" format:"uuid"`
 	Body      string    `json:"body"`
-	CreatedAt time.Time `json:"created_at"`
+	CreatedAt time.Time `json:"created_at" format:"date-time"`
 }
 
 type ListTaskCommentsResponse struct {

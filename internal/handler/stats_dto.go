@@ -12,16 +12,16 @@ type TaskStatusCountsResponse struct {
 }
 
 type AssigneeStatsResponse struct {
-	UserID      uuid.UUID `json:"user_id"`
+	UserID      uuid.UUID `json:"user_id" format:"uuid"`
 	Name        string    `json:"name"`
 	ClosedTasks int       `json:"closed_tasks"`
 }
 
 type TeamStatsResponse struct {
-	TeamID              uuid.UUID                `json:"team_id"`
+	TeamID              uuid.UUID                `json:"team_id" format:"uuid"`
 	TasksByStatus       TaskStatusCountsResponse `json:"tasks_by_status"`
 	TopAssignees        []AssigneeStatsResponse  `json:"top_assignees"`
-	AverageCloseSeconds *float64                 `json:"average_close_seconds"`
+	AverageCloseSeconds *float64                 `json:"average_close_seconds" extensions:"x-nullable"`
 	CommentsCount       int                      `json:"comments_count"`
 }
 
