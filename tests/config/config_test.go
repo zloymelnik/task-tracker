@@ -28,9 +28,10 @@ func TestLoadConfigYAML(t *testing.T) {
 				wantEnv = "local"
 			}
 			want := config.Config{
-				Env:  wantEnv,
-				DB:   validTestDB(),
-				Auth: validTestAuth(),
+				Env:   wantEnv,
+				DB:    validTestDB(),
+				Auth:  validTestAuth(),
+				Redis: validTestRedis(),
 				Server: config.Server{
 					Port:            8080,
 					ReadTimeout:     5 * time.Second,
@@ -59,9 +60,10 @@ func TestLoadConfigEnvOverridesYAML(t *testing.T) {
 		t.Fatalf("LoadConfig() error: %v", err)
 	}
 	want := config.Config{
-		Env:  "prod",
-		DB:   validTestDB(),
-		Auth: validTestAuth(),
+		Env:   "prod",
+		DB:    validTestDB(),
+		Auth:  validTestAuth(),
+		Redis: validTestRedis(),
 		Server: config.Server{
 			Port:            9090,
 			ReadTimeout:     2 * time.Second,
@@ -126,6 +128,16 @@ func writeConfig(t *testing.T, env string, port int, read, write, shutdown strin
 	content := fmt.Sprintf("env: %q\nserver:\n  port: %d\n  read_timeout: %q\n  write_timeout: %q\n  shutdown_timeout: %q\n", env, port, read, write, shutdown)
 	content += `auth:
   jwt_ttl: 5m
+redis:
+  addr: redis:6379
+  db: 0
+  pool_size: 10
+  max_request_time: 5s
+  cache_ttl: 5m
+  load_timeout: 5s
+  retry:
+    max_attempts: 10
+    delay: 2s
 mysql:
   host: mysql
   port: 3306
@@ -154,6 +166,10 @@ func isolateConfigEnv(t *testing.T) {
 		"DB_POOL_MAX_REQUEST_TIME", "DB_POOL_MAX_OPEN_CONNS", "DB_POOL_MAX_IDLE_CONNS",
 		"DB_POOL_CONN_MAX_LIFETIME", "DB_RETRY_MAX_ATTEMPTS", "DB_RETRY_DELAY",
 		"JWT_SECRET", "JWT_TTL",
+		"DOCS_ENABLED",
+		"REDIS_ADDR", "REDIS_DB", "REDIS_PASSWORD", "REDIS_MAX_REQUEST_TIME",
+		"REDIS_POOL_SIZE", "REDIS_CACHE_TTL", "REDIS_LOAD_TIMEOUT",
+		"REDIS_RETRY_MAX_ATTEMPTS", "REDIS_RETRY_DELAY",
 	} {
 		// Setenv registers cleanup to restore the original environment.
 		// Unsetenv lets cleanenv use YAML values and defaults during this test.
@@ -168,6 +184,14 @@ func isolateConfigEnv(t *testing.T) {
 
 func validTestAuth() config.Auth {
 	return config.Auth{JWTSecret: "test-only-jwt-secret", JWTTtl: 5 * time.Minute}
+}
+
+func validTestRedis() config.Redis {
+	return config.Redis{
+		Addr: "redis:6379", DB: 0, PoolSize: 10,
+		MaxRequestTime: 5 * time.Second, CacheTTL: 5 * time.Minute, LoadTimeout: 5 * time.Second,
+		Retry: config.RedisRetry{MaxAttempts: 10, Delay: 2 * time.Second},
+	}
 }
 
 func TestLoadConfigJWTEnvOverridesYAML(t *testing.T) {
@@ -345,5 +369,8 @@ func TestProjectConfig(t *testing.T) {
 	}
 	if got.DB != validTestDB() {
 		t.Errorf("project DB = %+v, want %+v", got.DB, validTestDB())
+	}
+	if got.Redis != validTestRedis() {
+		t.Errorf("project Redis = %+v, want %+v", got.Redis, validTestRedis())
 	}
 }

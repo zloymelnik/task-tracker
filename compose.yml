@@ -20,11 +20,11 @@ services:
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      - REDIS_ADDR=redis:6379
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - ENV=${ENV:-local}
       - JWT_SECRET=${JWT_SECRET}
+      - DOCS_ENABLED=${DOCS_ENABLED:-false}
     depends_on:
       mysql:
         condition: service_healthy

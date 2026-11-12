@@ -55,6 +55,11 @@ func (c *isolatedTablesConn) QueryContext(ctx context.Context, query string, arg
 
 func newLockingTestDB(t *testing.T) *sqlx.DB {
 	t.Helper()
+	return newIsolatedRepositoryDB(t, false)
+}
+
+func newIsolatedRepositoryDB(t *testing.T, includeTasks bool) *sqlx.DB {
+	t.Helper()
 	dsn := os.Getenv("MYSQL_TEST_DSN")
 	if dsn == "" {
 		t.Skip("set MYSQL_TEST_DSN to run MySQL locking tests")
@@ -68,8 +73,9 @@ func newLockingTestDB(t *testing.T) *sqlx.DB {
 	cfg.Timeout = 5 * time.Second
 	cfg.ReadTimeout = 5 * time.Second
 	cfg.WriteTimeout = 5 * time.Second
-	prefix := "test_" + strings.ReplaceAll(uuid.NewString(), "-", "") + "_"
-	replace := strings.NewReplacer("team_members", prefix+"team_members", "teams", prefix+"teams", "users", prefix+"users")
+	// Keep generated index/constraint names within MySQL's 64-character limit.
+	prefix := "t" + strings.ReplaceAll(uuid.NewString(), "-", "") + "_"
+	replace := strings.NewReplacer("task_comments", prefix+"task_comments", "task_history", prefix+"task_history", "tasks", prefix+"tasks", "team_members", prefix+"team_members", "teams", prefix+"teams", "users", prefix+"users")
 	driverName := prefix + "driver"
 	sql.Register(driverName, isolatedTablesDriver{replace: replace})
 	db, err := sqlx.Open(driverName, cfg.FormatDSN())
@@ -79,10 +85,22 @@ func newLockingTestDB(t *testing.T) *sqlx.DB {
 	db.SetMaxOpenConns(4)
 	var created []string
 	t.Cleanup(func() {
+		// Tests may deliberately close db to verify error handling. Cleanup
+		// needs its own connection to remove every table in either case.
+		cleanupDB, err := sqlx.Open(driverName, cfg.FormatDSN())
+		if err != nil {
+			t.Errorf("open cleanup database: %v", err)
+			return
+		}
+		defer func() {
+			if err := cleanupDB.Close(); err != nil {
+				t.Errorf("close cleanup database: %v", err)
+			}
+		}()
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		for i := len(created) - 1; i >= 0; i-- {
-			if _, err := db.ExecContext(ctx, "DROP TABLE "+created[i]); err != nil {
+			if _, err := cleanupDB.ExecContext(ctx, "DROP TABLE "+created[i]); err != nil {
 				t.Errorf("drop isolated table: %v", err)
 			}
 		}
@@ -92,11 +110,19 @@ func newLockingTestDB(t *testing.T) *sqlx.DB {
 	})
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	for _, migration := range []struct{ file, table string }{
+	migrations := []struct{ file, table string }{
 		{"000001_create_users_table.up.sql", "users"},
 		{"000002_teams.up.sql", "teams"},
 		{"000003_team_members.up.sql", "team_members"},
-	} {
+	}
+	if includeTasks {
+		migrations = append(migrations,
+			struct{ file, table string }{"000004_tasks.up.sql", "tasks"},
+			struct{ file, table string }{"000005_task_history.up.sql", "task_history"},
+			struct{ file, table string }{"000006_task_comments.up.sql", "task_comments"},
+		)
+	}
+	for _, migration := range migrations {
 		schema, err := os.ReadFile("../../../migrations/" + migration.file)
 		if err != nil {
 			t.Fatal(err)

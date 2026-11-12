@@ -33,11 +33,11 @@ func (f teamServiceFunc) Create(ctx context.Context, id uuid.UUID, input service
 	return f(ctx, id, input)
 }
 
-func (f teamServiceFunc) List(context.Context, uuid.UUID) ([]domain.Team, error) {
+func (f teamServiceFunc) List(context.Context, uuid.UUID, domain.TeamFilter) ([]domain.Team, int, error) {
 	panic("unexpected List call in create-team service stub")
 }
 
-type listTeamServiceFunc func(context.Context, uuid.UUID) ([]domain.Team, error)
+type listTeamServiceFunc func(context.Context, uuid.UUID, domain.TeamFilter) ([]domain.Team, int, error)
 
 func (f listTeamServiceFunc) UpdateRole(context.Context, uuid.UUID, uuid.UUID, uuid.UUID, domain.TeamRole) error {
 	panic("unexpected UpdateRole call in list-team service stub")
@@ -51,8 +51,8 @@ func (f listTeamServiceFunc) Create(context.Context, uuid.UUID, service.CreateTe
 	panic("unexpected Create call in list-team service stub")
 }
 
-func (f listTeamServiceFunc) List(ctx context.Context, id uuid.UUID) ([]domain.Team, error) {
-	return f(ctx, id)
+func (f listTeamServiceFunc) List(ctx context.Context, id uuid.UUID, filter domain.TeamFilter) ([]domain.Team, int, error) {
+	return f(ctx, id, filter)
 }
 
 func TestListTeams(t *testing.T) {
@@ -71,16 +71,16 @@ func TestListTeams(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			calls := 0
-			s := listTeamServiceFunc(func(gotCtx context.Context, id uuid.UUID) ([]domain.Team, error) {
+			s := listTeamServiceFunc(func(gotCtx context.Context, id uuid.UUID, filter domain.TeamFilter) ([]domain.Team, int, error) {
 				calls++
-				if id != userID {
+				if id != userID || filter.UserID != nil || filter.Limit != 20 || filter.Offset != 0 {
 					t.Errorf("userID=%s, want authenticated user %s", id, userID)
 				}
 				cancel()
 				if !errors.Is(gotCtx.Err(), context.Canceled) {
 					t.Error("request cancellation was lost")
 				}
-				return tt.teams, nil
+				return tt.teams, 42, nil
 			})
 			parser := tokenParserFunc(func(string) (uuid.UUID, error) { return userID, nil })
 			endpoint := handler.AuthMiddleware(parser, silentLogger())(http.HandlerFunc(handler.NewTeamHandler(s, silentLogger()).List))
@@ -92,11 +92,12 @@ func TestListTeams(t *testing.T) {
 				t.Fatalf("status=%d calls=%d, want 200/1", rec.Code, calls)
 			}
 			assertJSONContentType(t, rec)
-			var got []handler.CreateTeamResponse
-			if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+			var page handler.ListTeamsResponse
+			if err := json.Unmarshal(rec.Body.Bytes(), &page); err != nil {
 				t.Fatal(err)
 			}
-			if got == nil || len(got) != len(tt.teams) {
+			got := page.Items
+			if got == nil || len(got) != len(tt.teams) || page.Total != 42 || page.Limit != 20 || page.Offset != 0 {
 				t.Fatalf("response=%s, want array of %d teams", rec.Body.String(), len(tt.teams))
 			}
 			for i, want := range tt.teams {
@@ -121,9 +122,9 @@ func TestListTeamsErrors(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			calls := 0
-			s := listTeamServiceFunc(func(context.Context, uuid.UUID) ([]domain.Team, error) {
+			s := listTeamServiceFunc(func(context.Context, uuid.UUID, domain.TeamFilter) ([]domain.Team, int, error) {
 				calls++
-				return nil, tt.serviceErr
+				return nil, 0, tt.serviceErr
 			})
 			var logs bytes.Buffer
 			log := slog.New(slog.NewTextHandler(&logs, nil))

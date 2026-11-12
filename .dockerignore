@@ -1,0 +1,9 @@
+.git
+.env
+.env.*
+!.env.example
+tmp
+coverage.out
+coverage.html
+.idea
+.vscode

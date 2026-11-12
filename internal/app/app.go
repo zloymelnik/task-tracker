@@ -8,16 +8,19 @@ import (
 	"net/http"
 
 	"github.com/jmoiron/sqlx"
+	goredis "github.com/redis/go-redis/v9"
 	"github.com/zloymelnik/task-tracker/internal/config"
 	"github.com/zloymelnik/task-tracker/internal/handler"
 	"github.com/zloymelnik/task-tracker/internal/service"
 	"github.com/zloymelnik/task-tracker/internal/storage/mysql"
+	redisstorage "github.com/zloymelnik/task-tracker/internal/storage/redis"
 )
 
 type App struct {
 	server *http.Server
 	log    *slog.Logger
 	db     *sqlx.DB
+	redis  *goredis.Client
 }
 
 func NewApp(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, error) {
@@ -25,10 +28,16 @@ func NewApp(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, er
 	if err != nil {
 		return nil, fmt.Errorf("init mysql: %w", err)
 	}
+	redisClient, err := redisstorage.NewConnection(ctx, &cfg.Redis, log)
+	if err != nil {
+		dbError := db.Close()
+		return nil, fmt.Errorf("init redis: %w", errors.Join(err, dbError))
+	}
 	repo := mysql.NewRepository(cfg.DB, db, log)
-	services := service.NewService(cfg, repo, log)
+	cache := redisstorage.NewCache(redisClient, cfg.Redis.MaxRequestTime, log)
+	services := service.NewService(cfg, repo, cache, log)
 	handlers := handler.New(services, log)
-	router := NewRouter(handlers, services.Auth, log)
+	router := NewRouter(handlers, cfg.Docs.Enabled, services.Auth, log)
 
 	a := &App{
 		server: &http.Server{
@@ -37,8 +46,9 @@ func NewApp(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, er
 			ReadTimeout:  cfg.Server.ReadTimeout,
 			WriteTimeout: cfg.Server.WriteTimeout,
 		},
-		log: log,
-		db:  db,
+		log:   log,
+		db:    db,
+		redis: redisClient,
 	}
 	return a, nil
 }
@@ -50,5 +60,6 @@ func (a *App) Run() error {
 func (a *App) Shutdown(ctx context.Context) error {
 	serverErr := a.server.Shutdown(ctx)
 	dbErr := a.db.Close()
-	return errors.Join(serverErr, dbErr)
+	redisError := a.redis.Close()
+	return errors.Join(serverErr, dbErr, redisError)
 }

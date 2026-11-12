@@ -27,7 +27,7 @@ func (f updateRoleServiceFunc) Create(context.Context, uuid.UUID, service.Create
 	panic("unexpected Create call in update-role stub")
 }
 
-func (f updateRoleServiceFunc) List(context.Context, uuid.UUID) ([]domain.Team, error) {
+func (f updateRoleServiceFunc) List(context.Context, uuid.UUID, domain.TeamFilter) ([]domain.Team, int, error) {
 	panic("unexpected List call in update-role stub")
 }
 
@@ -63,7 +63,7 @@ func roleRouter(s handler.TeamService, log *slog.Logger) http.Handler {
 		Auth:   handler.NewAuthHandler(parser, log),
 		Team:   handler.NewTeamHandler(s, log),
 	}
-	return app.NewRouter(h, parser, log)
+	return app.NewRouter(h, false, parser, log)
 }
 
 func TestUpdateRoleRouteSuccess(t *testing.T) {

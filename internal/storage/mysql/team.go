@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -48,35 +49,51 @@ type rawTeam struct {
 	CreatedBy []byte    `db:"created_by"`
 }
 
-func (t *TeamRepository) ListByUserID(ctx context.Context, userID uuid.UUID) ([]domain.Team, error) {
-	t.log.Debug("MySQL: Team: Gets teams by user_id", "id", userID)
+func (t *TeamRepository) List(ctx context.Context, filter domain.TeamFilter) ([]domain.Team, int, error) {
+	t.log.Debug("MySQL: Team: Gets teams by user_id", "filter", filter)
 	ctx, cancel := context.WithTimeout(ctx, t.timeout)
 	defer cancel()
 	executor := getExecutor(ctx, t.db)
+
+	var conditions, joins strings.Builder
+	var args []interface{}
+	if filter.UserID != nil {
+		if *filter.UserID == uuid.Nil {
+			return nil, 0, fmt.Errorf("MySQL: Team: %w: user_id must not be zero", domain.ErrInvalidInput)
+		}
+		conditions.WriteString(" AND tm.user_id = ?")
+		joins.WriteString(" JOIN team_members AS tm ON tm.team_id = t.id ")
+		args = append(args, uuidToBytes(*filter.UserID))
+	}
+	from := "FROM teams AS t" + joins.String() + " WHERE 1 = 1" + conditions.String()
+
+	var total int
+	err := executor.GetContext(ctx, &total, "SELECT COUNT(*) "+from, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("MySQL: Team: Failed to get total teams: %w", err)
+	}
+
 	var rawTeams []rawTeam
-	err := executor.SelectContext(
+	args = append(args, filter.Limit, filter.Offset)
+	err = executor.SelectContext(
 		ctx,
 		&rawTeams,
-		`SELECT t.id, t.name, t.created_at, t.created_by
-		FROM teams AS t
-		JOIN team_members AS tm ON tm.team_id = t.id
-		WHERE tm.user_id = ?
-		ORDER BY t.created_at DESC, t.id DESC`,
-		uuidToBytes(userID),
+		"SELECT t.id, t.name, t.created_at, t.created_by "+from+" ORDER BY t.created_at DESC, t.id DESC LIMIT ? OFFSET ?",
+		args...,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("MySQL: Team: Failed to get list of teams by user_id: %w", err)
+		return nil, 0, fmt.Errorf("MySQL: Team: Failed to get list of teams by user_id: %w", err)
 	}
 	teams := make([]domain.Team, 0, len(rawTeams))
 	for _, r := range rawTeams {
 		t, err := rawToTeam(&r)
 		if err != nil {
-			return nil, fmt.Errorf("MySQL: Team: failed to parse team row: %w", err)
+			return nil, 0, fmt.Errorf("MySQL: Team: failed to parse team row: %w", err)
 		}
 		teams = append(teams, *t)
 	}
-	t.log.Debug("MySQL: Team: Gets team data for user_id successfully", "user_id", userID, "team_count", len(teams))
-	return teams, nil
+	t.log.Debug("MySQL: Team: Gets team data for user_id successfully", "filter", filter, "total", total)
+	return teams, total, nil
 }
 
 func rawToTeam(r *rawTeam) (*domain.Team, error) {

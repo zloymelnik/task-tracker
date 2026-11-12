@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -23,6 +24,8 @@ type Config struct {
 	Server Server `yaml:"server"`
 	DB     DB     `yaml:"mysql"`
 	Auth   Auth   `yaml:"auth"`
+	Redis  Redis  `yaml:"redis"`
+	Docs   Docs   `yaml:"docs"`
 }
 
 // Server holds HTTP server tuning parameters.
@@ -65,6 +68,28 @@ type Auth struct {
 	JWTTtl    time.Duration `yaml:"jwt_ttl" env:"JWT_TTL"`
 }
 
+// Redis holds redis parameters.
+type Redis struct {
+	Addr           string        `yaml:"addr"             env:"REDIS_ADDR"`
+	DB             int           `yaml:"db"               env:"REDIS_DB"`
+	Password       string        `yaml:"-"                env:"REDIS_PASSWORD"`
+	MaxRequestTime time.Duration `yaml:"max_request_time" env:"REDIS_MAX_REQUEST_TIME"`
+	PoolSize       int           `yaml:"pool_size"        env:"REDIS_POOL_SIZE"`
+	CacheTTL       time.Duration `yaml:"cache_ttl"        env:"REDIS_CACHE_TTL"`
+	LoadTimeout    time.Duration `yaml:"load_timeout"     env:"REDIS_LOAD_TIMEOUT"`
+	Retry          RedisRetry    `yaml:"retry"`
+}
+
+// RedisRetry holds the maximum number of connection attempts and the delay between them.
+type RedisRetry struct {
+	MaxAttempts int           `yaml:"max_attempts" env:"REDIS_RETRY_MAX_ATTEMPTS"`
+	Delay       time.Duration `yaml:"delay"        env:"REDIS_RETRY_DELAY"`
+}
+
+type Docs struct {
+	Enabled bool `yaml:"enabled" env:"DOCS_ENABLED"`
+}
+
 func LoadConfig(path string) (*Config, error) {
 	var cfg Config
 	if path == "" {
@@ -96,6 +121,9 @@ func (c *Config) isValid() error {
 	}
 	if err := c.Auth.isValid(); err != nil {
 		return fmt.Errorf("wrong auth settings: %w", err)
+	}
+	if err := c.Redis.isValid(); err != nil {
+		return fmt.Errorf("wrong redis settings: %w", err)
 	}
 	return nil
 }
@@ -159,6 +187,34 @@ func (a *Auth) isValid() error {
 	}
 	if a.JWTTtl <= 0 {
 		return fmt.Errorf("wrong jwt ttl")
+	}
+	return nil
+}
+
+func (r *Redis) isValid() error {
+	if strings.TrimSpace(r.Addr) == "" {
+		return fmt.Errorf("wrong addr")
+	}
+	if r.DB < 0 {
+		return fmt.Errorf("wrong db")
+	}
+	if r.MaxRequestTime <= 0 {
+		return fmt.Errorf("wrong max_request_time")
+	}
+	if r.PoolSize <= 0 {
+		return fmt.Errorf("wrong pool_size")
+	}
+	if r.CacheTTL <= 0 {
+		return fmt.Errorf("wrong cache_ttl")
+	}
+	if r.LoadTimeout <= 0 {
+		return fmt.Errorf("wrong load_timeout")
+	}
+	if r.Retry.MaxAttempts <= 0 {
+		return fmt.Errorf("wrong Redis max_attempts")
+	}
+	if r.Retry.Delay <= 0 {
+		return fmt.Errorf("wrong Redis delay")
 	}
 	return nil
 }

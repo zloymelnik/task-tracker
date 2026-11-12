@@ -20,3 +20,17 @@ mysql:
 
 auth:
   jwt_ttl: 5m
+
+redis:
+  addr: redis:6379
+  db: 0
+  pool_size: 10
+  max_request_time: 5s
+  cache_ttl: 5m
+  load_timeout: 5s
+  retry:
+    max_attempts: 10
+    delay: 2s
+
+docs:
+  enabled: false

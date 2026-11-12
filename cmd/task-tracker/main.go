@@ -15,6 +15,15 @@ import (
 	"github.com/zloymelnik/task-tracker/internal/logger"
 )
 
+// @title Task Tracker API
+// @version 1.0
+// @description Управление командами, задачами и статистикой.
+// @BasePath /api/v1
+//
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Введите Bearer и JWT через пробел.
 func main() {
 	//Inits config
 	configPath := flag.String("config-path", "configs/config.yaml", "Please set in the config-path flag the path to config file")

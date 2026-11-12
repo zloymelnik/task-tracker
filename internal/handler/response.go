@@ -56,6 +56,10 @@ func respondError(w http.ResponseWriter, err error, log *slog.Logger) {
 		status, message = http.StatusConflict, "already exists"
 	case errors.Is(err, domain.ErrTeamMemberNotFound):
 		status, message = http.StatusNotFound, "member not found"
+	case errors.Is(err, domain.ErrTaskNotFound):
+		status, message = http.StatusNotFound, "not found"
+	case errors.Is(err, domain.ErrTaskVersionConflict):
+		status, message = http.StatusConflict, "write conflict"
 	default:
 		log.Error("Request failed", "error", err)
 	}

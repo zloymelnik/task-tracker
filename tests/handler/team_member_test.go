@@ -30,7 +30,7 @@ func (f inviteServiceFunc) Create(context.Context, uuid.UUID, service.CreateTeam
 	panic("unexpected Create call in invite stub")
 }
 
-func (f inviteServiceFunc) List(context.Context, uuid.UUID) ([]domain.Team, error) {
+func (f inviteServiceFunc) List(context.Context, uuid.UUID, domain.TeamFilter) ([]domain.Team, int, error) {
 	panic("unexpected List call in invite stub")
 }
 
@@ -50,7 +50,7 @@ func inviteRouter(s handler.TeamService, actor uuid.UUID, log *slog.Logger) http
 		Auth:   handler.NewAuthHandler(nil, log),
 		Team:   handler.NewTeamHandler(s, log),
 	}
-	return app.NewRouter(h, parser, log)
+	return app.NewRouter(h, false, parser, log)
 }
 
 func TestInviteTeamRouteSuccess(t *testing.T) {

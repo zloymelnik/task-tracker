@@ -25,8 +25,8 @@ func (f teamRepositoryFunc) Save(ctx context.Context, team *domain.Team) error {
 	return f(ctx, team)
 }
 
-func (f teamRepositoryFunc) ListByUserID(context.Context, uuid.UUID) ([]domain.Team, error) {
-	panic("unexpected ListByUserID call in create-team repository stub")
+func (f teamRepositoryFunc) List(context.Context, domain.TeamFilter) ([]domain.Team, int, error) {
+	panic("unexpected List call in create-team repository stub")
 }
 
 type teamMemberRepositoryFunc func(context.Context, *domain.TeamMember) error
@@ -43,14 +43,14 @@ func (f teamMemberRepositoryFunc) GetByTeamAndUserIDForUpdate(context.Context, u
 	panic("unexpected GetByTeamAndUserIDForUpdate call in create-team repository stub")
 }
 
-type listTeamRepositoryFunc func(context.Context, uuid.UUID) ([]domain.Team, error)
+type listTeamRepositoryFunc func(context.Context, domain.TeamFilter) ([]domain.Team, int, error)
 
 func (f listTeamRepositoryFunc) Save(context.Context, *domain.Team) error {
 	panic("unexpected Save call in list-team repository stub")
 }
 
-func (f listTeamRepositoryFunc) ListByUserID(ctx context.Context, id uuid.UUID) ([]domain.Team, error) {
-	return f(ctx, id)
+func (f listTeamRepositoryFunc) List(ctx context.Context, filter domain.TeamFilter) ([]domain.Team, int, error) {
+	return f(ctx, filter)
 }
 
 func TestListTeams(t *testing.T) {
@@ -76,18 +76,23 @@ func TestListTeams(t *testing.T) {
 				cancel()
 			}
 			calls := 0
-			repo := listTeamRepositoryFunc(func(gotCtx context.Context, id uuid.UUID) ([]domain.Team, error) {
+			repo := listTeamRepositoryFunc(func(gotCtx context.Context, filter domain.TeamFilter) ([]domain.Team, int, error) {
 				calls++
-				if gotCtx != ctx || id != tt.id {
+				if gotCtx != ctx || filter.UserID == nil || *filter.UserID != tt.id || filter.Limit != 20 || filter.Offset != 10 {
 					t.Error("repository received wrong context or user ID")
 				}
 				if err := gotCtx.Err(); err != nil {
-					return nil, err
+					return nil, 0, err
 				}
-				return tt.teams, tt.err
+				return tt.teams, 42, tt.err
 			})
-			got, err := service.NewTeamService(nil, repo, nil, nil, testLogger()).List(ctx, tt.id)
-			if !errors.Is(err, tt.wantErr) || !reflect.DeepEqual(got, tt.teams) {
+			foreign := uuid.New()
+			got, total, err := service.NewTeamService(nil, repo, nil, nil, testLogger()).List(ctx, tt.id, domain.TeamFilter{UserID: &foreign, Limit: 20, Offset: 10})
+			wantTotal := 42
+			if tt.wantErr != nil {
+				wantTotal = 0
+			}
+			if !errors.Is(err, tt.wantErr) || !reflect.DeepEqual(got, tt.teams) || total != wantTotal {
 				t.Errorf("List()=(%v, %v), want (%v, %v)", got, err, tt.teams, tt.wantErr)
 			}
 			wantCalls := 1

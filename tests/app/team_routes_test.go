@@ -34,11 +34,11 @@ func (f createTeamServiceFunc) Create(ctx context.Context, id uuid.UUID, input s
 	return f(ctx, id, input)
 }
 
-func (f createTeamServiceFunc) List(context.Context, uuid.UUID) ([]domain.Team, error) {
+func (f createTeamServiceFunc) List(context.Context, uuid.UUID, domain.TeamFilter) ([]domain.Team, int, error) {
 	panic("unexpected List call in create-team route stub")
 }
 
-type listTeamServiceFunc func(context.Context, uuid.UUID) ([]domain.Team, error)
+type listTeamServiceFunc func(context.Context, uuid.UUID, domain.TeamFilter) ([]domain.Team, int, error)
 
 func (f listTeamServiceFunc) UpdateRole(context.Context, uuid.UUID, uuid.UUID, uuid.UUID, domain.TeamRole) error {
 	panic("unexpected UpdateRole call in list-team route stub")
@@ -52,8 +52,8 @@ func (f listTeamServiceFunc) Create(context.Context, uuid.UUID, service.CreateTe
 	panic("unexpected Create call in list-team route stub")
 }
 
-func (f listTeamServiceFunc) List(ctx context.Context, id uuid.UUID) ([]domain.Team, error) {
-	return f(ctx, id)
+func (f listTeamServiceFunc) List(ctx context.Context, id uuid.UUID, filter domain.TeamFilter) ([]domain.Team, int, error) {
+	return f(ctx, id, filter)
 }
 
 func TestListTeamsRoute(t *testing.T) {
@@ -64,16 +64,16 @@ func TestListTeamsRoute(t *testing.T) {
 			log := slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))
 			parser := service.NewAuthService(config.Auth{JWTSecret: secret}, nil, log)
 			calls := 0
-			s := listTeamServiceFunc(func(ctx context.Context, id uuid.UUID) ([]domain.Team, error) {
+			s := listTeamServiceFunc(func(ctx context.Context, id uuid.UUID, filter domain.TeamFilter) ([]domain.Team, int, error) {
 				calls++
-				if id != userID {
+				if id != userID || filter.UserID != nil || filter.Limit != 5 || filter.Offset != 10 {
 					t.Errorf("userID=%s, want %s", id, userID)
 				}
-				return []domain.Team{}, nil
+				return []domain.Team{}, 42, nil
 			})
 			h := &handler.Handler{Auth: handler.NewAuthHandler(parser, log), Team: handler.NewTeamHandler(s, log)}
-			router := app.NewRouter(h, parser, log)
-			req := httptest.NewRequest(http.MethodGet, "/api/v1/teams", nil)
+			router := app.NewRouter(h, false, parser, log)
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/teams?limit=5&offset=10&user_id="+uuid.NewString(), nil)
 			if tokenKind != "missing" {
 				token := "invalid-token"
 				if tokenKind != "malformed" {
@@ -92,8 +92,8 @@ func TestListTeamsRoute(t *testing.T) {
 			rec := httptest.NewRecorder()
 			router.ServeHTTP(rec, req)
 			if tokenKind == "valid" {
-				if rec.Code != http.StatusOK || calls != 1 || strings.TrimSpace(rec.Body.String()) != "[]" {
-					t.Errorf("status=%d calls=%d body=%s, want 200/1/[]", rec.Code, calls, rec.Body.String())
+				if rec.Code != http.StatusOK || calls != 1 || strings.TrimSpace(rec.Body.String()) != `{"items":[],"total":42,"limit":5,"offset":10}` {
+					t.Errorf("status=%d calls=%d body=%s, want 200/1 and page with total=42 limit=5 offset=10", rec.Code, calls, rec.Body.String())
 				}
 			} else if rec.Code != http.StatusUnauthorized || calls != 0 || rec.Header().Get("WWW-Authenticate") != "Bearer" {
 				t.Errorf("status=%d calls=%d, want 401/0 and Bearer challenge", rec.Code, calls)
@@ -143,7 +143,7 @@ func TestCreateTeamRoute(t *testing.T) {
 				Auth: handler.NewAuthHandler(parser, log),
 				Team: handler.NewTeamHandler(s, log),
 			}
-			router := app.NewRouter(h, parser, log)
+			router := app.NewRouter(h, false, parser, log)
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/teams", strings.NewReader(`{"name":"Team"}`))
 			if tt.tokenKind != "missing" {
 				token := "invalid-token"

@@ -10,6 +10,7 @@ tmp_dir = "tmp"
   exclude_regex = ["_test\\.go"]
   stop_on_error = true
   log = "build-errors.log"
+  include_file = ["api/openapi/swagger.json"]
 
 [log]
   time = false

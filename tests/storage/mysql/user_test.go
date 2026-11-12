@@ -18,7 +18,7 @@ import (
 )
 
 // TestUserRepository requires MYSQL_TEST_DSN, for example:
-// MYSQL_TEST_DSN='app:password@tcp(mysql:3306)/team_tasks' go test -race ./internal/storage/mysql -v
+// MYSQL_TEST_DSN='app:password@tcp(mysql:3306)/team_tasks' go test -race ./tests/storage/mysql -v
 // Each subtest uses a connection-local temporary users table, leaving existing data intact.
 func TestUserRepository(t *testing.T) {
 	t.Run("save and read", func(t *testing.T) {
