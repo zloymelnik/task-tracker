@@ -50,7 +50,7 @@ func inviteRouter(s handler.TeamService, actor uuid.UUID, log *slog.Logger) http
 		Auth:   handler.NewAuthHandler(nil, log),
 		Team:   handler.NewTeamHandler(s, log),
 	}
-	return app.NewRouter(h, false, parser, log)
+	return app.NewRouter(h, false, parser, allowAllRateLimiter{}, allowAllRateLimiter{}, allowAllRateLimiter{}, log)
 }
 
 func TestInviteTeamRouteSuccess(t *testing.T) {

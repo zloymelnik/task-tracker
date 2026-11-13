@@ -28,10 +28,11 @@ func TestLoadConfigYAML(t *testing.T) {
 				wantEnv = "local"
 			}
 			want := config.Config{
-				Env:   wantEnv,
-				DB:    validTestDB(),
-				Auth:  validTestAuth(),
-				Redis: validTestRedis(),
+				RateLimit: config.RateLimit{Interval: 5 * time.Second, Burst: 10, MaxEntries: 1000},
+				Env:       wantEnv,
+				DB:        validTestDB(),
+				Auth:      validTestAuth(),
+				Redis:     validTestRedis(),
 				Server: config.Server{
 					Port:            8080,
 					ReadTimeout:     5 * time.Second,
@@ -60,10 +61,11 @@ func TestLoadConfigEnvOverridesYAML(t *testing.T) {
 		t.Fatalf("LoadConfig() error: %v", err)
 	}
 	want := config.Config{
-		Env:   "prod",
-		DB:    validTestDB(),
-		Auth:  validTestAuth(),
-		Redis: validTestRedis(),
+		RateLimit: config.RateLimit{Interval: 5 * time.Second, Burst: 10, MaxEntries: 1000},
+		Env:       "prod",
+		DB:        validTestDB(),
+		Auth:      validTestAuth(),
+		Redis:     validTestRedis(),
 		Server: config.Server{
 			Port:            9090,
 			ReadTimeout:     2 * time.Second,
@@ -126,8 +128,20 @@ func writeConfig(t *testing.T, env string, port int, read, write, shutdown strin
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "config.yaml")
 	content := fmt.Sprintf("env: %q\nserver:\n  port: %d\n  read_timeout: %q\n  write_timeout: %q\n  shutdown_timeout: %q\n", env, port, read, write, shutdown)
-	content += `auth:
+	content += `rate_limit:
+  interval: 5s
+  burst: 10
+  max_entries: 1000
+auth:
   jwt_ttl: 5m
+  login_limit:
+    interval: 6s
+    burst: 5
+    max_entries: 1000
+  register_limit:
+    interval: 60s
+    burst: 3
+    max_entries: 1000
 redis:
   addr: redis:6379
   db: 0
@@ -166,6 +180,9 @@ func isolateConfigEnv(t *testing.T) {
 		"DB_POOL_MAX_REQUEST_TIME", "DB_POOL_MAX_OPEN_CONNS", "DB_POOL_MAX_IDLE_CONNS",
 		"DB_POOL_CONN_MAX_LIFETIME", "DB_RETRY_MAX_ATTEMPTS", "DB_RETRY_DELAY",
 		"JWT_SECRET", "JWT_TTL",
+		"RATE_LIMIT_INTERVAL", "RATE_LIMIT_BURST", "RATE_LIMIT_MAX_ENTRIES",
+		"AUTH_LOGIN_INTERVAL", "AUTH_LOGIN_BURST", "AUTH_LOGIN_MAX_ENTRIES",
+		"AUTH_REGISTER_INTERVAL", "AUTH_REGISTER_BURST", "AUTH_REGISTER_MAX_ENTRIES",
 		"DOCS_ENABLED",
 		"REDIS_ADDR", "REDIS_DB", "REDIS_PASSWORD", "REDIS_MAX_REQUEST_TIME",
 		"REDIS_POOL_SIZE", "REDIS_CACHE_TTL", "REDIS_LOAD_TIMEOUT",
@@ -183,7 +200,11 @@ func isolateConfigEnv(t *testing.T) {
 }
 
 func validTestAuth() config.Auth {
-	return config.Auth{JWTSecret: "test-only-jwt-secret", JWTTtl: 5 * time.Minute}
+	return config.Auth{
+		JWTSecret: "test-only-jwt-secret", JWTTtl: 5 * time.Minute,
+		LoginLimit:    config.RateLimit{Interval: 6 * time.Second, Burst: 5, MaxEntries: 1000},
+		RegisterLimit: config.RateLimit{Interval: time.Minute, Burst: 3, MaxEntries: 1000},
+	}
 }
 
 func validTestRedis() config.Redis {
@@ -203,7 +224,9 @@ func TestLoadConfigJWTEnvOverridesYAML(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadConfig() error: %v", err)
 	}
-	want := config.Auth{JWTSecret: "other-test-jwt-secret", JWTTtl: 15 * time.Minute}
+	want := validTestAuth()
+	want.JWTSecret = "other-test-jwt-secret"
+	want.JWTTtl = 15 * time.Minute
 	if got.Auth != want {
 		t.Errorf("Auth = %+v, want %+v", got.Auth, want)
 	}

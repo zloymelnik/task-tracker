@@ -378,11 +378,21 @@ paths:
         к MySQL и Redis не проверяет.
       produces:
       - text/plain
+      - application/json
       responses:
         "200":
           description: OK
           schema:
             type: string
+        "429":
+          description: Превышен лимит запросов
+          headers:
+            Retry-After:
+              description: Время ожидания перед повторной попыткой в секундах, минимум
+                1
+              type: integer
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
       summary: Статус сервиса
       tags:
       - health
@@ -416,6 +426,15 @@ paths:
             $ref: '#/definitions/handler.errorResponse'
         "413":
           description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "429":
+          description: Превышен лимит запросов
+          headers:
+            Retry-After:
+              description: Время ожидания перед повторной попыткой в секундах, минимум
+                1
+              type: integer
           schema:
             $ref: '#/definitions/handler.errorResponse'
         "500":
@@ -453,6 +472,15 @@ paths:
             $ref: '#/definitions/handler.errorResponse'
         "413":
           description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "429":
+          description: Превышен лимит запросов
+          headers:
+            Retry-After:
+              description: Время ожидания перед повторной попыткой в секундах, минимум
+                1
+              type: integer
           schema:
             $ref: '#/definitions/handler.errorResponse'
         "500":
@@ -518,6 +546,15 @@ paths:
           description: Forbidden
           schema:
             $ref: '#/definitions/handler.errorResponse'
+        "429":
+          description: Превышен лимит запросов
+          headers:
+            Retry-After:
+              description: Время ожидания перед повторной попыткой в секундах, минимум
+                1
+              type: integer
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -560,6 +597,15 @@ paths:
             $ref: '#/definitions/handler.errorResponse'
         "413":
           description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "429":
+          description: Превышен лимит запросов
+          headers:
+            Retry-After:
+              description: Время ожидания перед повторной попыткой в секундах, минимум
+                1
+              type: integer
           schema:
             $ref: '#/definitions/handler.errorResponse'
         "500":
@@ -627,6 +673,15 @@ paths:
           description: Request Entity Too Large
           schema:
             $ref: '#/definitions/handler.errorResponse'
+        "429":
+          description: Превышен лимит запросов
+          headers:
+            Retry-After:
+              description: Время ожидания перед повторной попыткой в секундах, минимум
+                1
+              type: integer
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -684,6 +739,15 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/handler.errorResponse'
+        "429":
+          description: Превышен лимит запросов
+          headers:
+            Retry-After:
+              description: Время ожидания перед повторной попыткой в секундах, минимум
+                1
+              type: integer
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -737,6 +801,15 @@ paths:
             $ref: '#/definitions/handler.errorResponse'
         "413":
           description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "429":
+          description: Превышен лимит запросов
+          headers:
+            Retry-After:
+              description: Время ожидания перед повторной попыткой в секундах, минимум
+                1
+              type: integer
           schema:
             $ref: '#/definitions/handler.errorResponse'
         "500":
@@ -795,6 +868,15 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/handler.errorResponse'
+        "429":
+          description: Превышен лимит запросов
+          headers:
+            Retry-After:
+              description: Время ожидания перед повторной попыткой в секундах, минимум
+                1
+              type: integer
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -835,6 +917,15 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/handler.errorResponse'
+        "429":
+          description: Превышен лимит запросов
+          headers:
+            Retry-After:
+              description: Время ожидания перед повторной попыткой в секундах, минимум
+                1
+              type: integer
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -872,6 +963,15 @@ paths:
             $ref: '#/definitions/handler.errorResponse'
         "413":
           description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "429":
+          description: Превышен лимит запросов
+          headers:
+            Retry-After:
+              description: Время ожидания перед повторной попыткой в секундах, минимум
+                1
+              type: integer
           schema:
             $ref: '#/definitions/handler.errorResponse'
         "500":
@@ -933,6 +1033,15 @@ paths:
           description: Request Entity Too Large
           schema:
             $ref: '#/definitions/handler.errorResponse'
+        "429":
+          description: Превышен лимит запросов
+          headers:
+            Retry-After:
+              description: Время ожидания перед повторной попыткой в секундах, минимум
+                1
+              type: integer
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -992,6 +1101,15 @@ paths:
           description: Request Entity Too Large
           schema:
             $ref: '#/definitions/handler.errorResponse'
+        "429":
+          description: Превышен лимит запросов
+          headers:
+            Retry-After:
+              description: Время ожидания перед повторной попыткой в секундах, минимум
+                1
+              type: integer
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -1031,6 +1149,15 @@ paths:
             $ref: '#/definitions/handler.errorResponse'
         "403":
           description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "429":
+          description: Превышен лимит запросов
+          headers:
+            Retry-After:
+              description: Время ожидания перед повторной попыткой в секундах, минимум
+                1
+              type: integer
           schema:
             $ref: '#/definitions/handler.errorResponse'
         "500":

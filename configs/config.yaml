@@ -20,6 +20,14 @@ mysql:
 
 auth:
   jwt_ttl: 5m
+  login_limit:
+    interval: 6s
+    burst: 5
+    max_entries: 10000
+  register_limit:
+    interval: 1m
+    burst: 3
+    max_entries: 10000
 
 redis:
   addr: redis:6379
@@ -34,3 +42,8 @@ redis:
 
 docs:
   enabled: false
+
+rate_limit:
+  interval: 100ms
+  burst: 30
+  max_entries: 10000

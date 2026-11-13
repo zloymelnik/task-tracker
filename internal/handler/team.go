@@ -45,6 +45,8 @@ func NewTeamHandler(s TeamService, log *slog.Logger) *TeamHandler {
 // @Failure 401 {object} errorResponse
 // @Failure 413 {object} errorResponse
 // @Failure 500 {object} errorResponse
+// @Failure 429 {object} errorResponse "Превышен лимит запросов"
+// @Header 429 {integer} Retry-After "Время ожидания перед повторной попыткой в секундах, минимум 1"
 // @Router /teams [post]
 func (h *TeamHandler) Create(w http.ResponseWriter, r *http.Request) {
 	userID, ok := UserIDFromContext(r.Context())
@@ -88,6 +90,8 @@ func (h *TeamHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {object} errorResponse
 // @Failure 401 {object} errorResponse
 // @Failure 500 {object} errorResponse
+// @Failure 429 {object} errorResponse "Превышен лимит запросов"
+// @Header 429 {integer} Retry-After "Время ожидания перед повторной попыткой в секундах, минимум 1"
 // @Router /teams [get]
 func (h *TeamHandler) List(w http.ResponseWriter, r *http.Request) {
 	userID, ok := UserIDFromContext(r.Context())
@@ -152,6 +156,8 @@ func (h *TeamHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Failure 409 {object} errorResponse
 // @Failure 413 {object} errorResponse
 // @Failure 500 {object} errorResponse
+// @Failure 429 {object} errorResponse "Превышен лимит запросов"
+// @Header 429 {integer} Retry-After "Время ожидания перед повторной попыткой в секундах, минимум 1"
 // @Router /teams/{id}/invite [post]
 func (h *TeamHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 	userID, ok := UserIDFromContext(r.Context())
@@ -209,6 +215,8 @@ func (h *TeamHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 // @Failure 404 {object} errorResponse
 // @Failure 413 {object} errorResponse
 // @Failure 500 {object} errorResponse
+// @Failure 429 {object} errorResponse "Превышен лимит запросов"
+// @Header 429 {integer} Retry-After "Время ожидания перед повторной попыткой в секундах, минимум 1"
 // @Router /teams/{id}/members/{user_id}/role [patch]
 func (h *TeamHandler) UpdateRole(w http.ResponseWriter, r *http.Request) {
 	actorID, ok := UserIDFromContext(r.Context())

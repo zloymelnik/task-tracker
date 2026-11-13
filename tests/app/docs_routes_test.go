@@ -26,7 +26,7 @@ func TestDocumentationRoutes(t *testing.T) {
 			log := slog.New(slog.NewTextHandler(io.Discard, nil))
 			h := handler.New(&service.Service{}, log)
 			// Documentation must work without a token or a token parser.
-			router := app.NewRouter(h, enabled, nil, log)
+			router := app.NewRouter(h, enabled, nil, allowAllRateLimiter{}, allowAllRateLimiter{}, allowAllRateLimiter{}, log)
 			for _, path := range []string{"/openapi.json", "/swagger/index.html", "/swagger/swagger-ui.css"} {
 				t.Run(path, func(t *testing.T) {
 					rec := httptest.NewRecorder()

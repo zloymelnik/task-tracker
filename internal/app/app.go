@@ -11,6 +11,7 @@ import (
 	goredis "github.com/redis/go-redis/v9"
 	"github.com/zloymelnik/task-tracker/internal/config"
 	"github.com/zloymelnik/task-tracker/internal/handler"
+	"github.com/zloymelnik/task-tracker/internal/ratelimit"
 	"github.com/zloymelnik/task-tracker/internal/service"
 	"github.com/zloymelnik/task-tracker/internal/storage/mysql"
 	redisstorage "github.com/zloymelnik/task-tracker/internal/storage/redis"
@@ -37,7 +38,46 @@ func NewApp(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, er
 	cache := redisstorage.NewCache(redisClient, cfg.Redis.MaxRequestTime, log)
 	services := service.NewService(cfg, repo, cache, log)
 	handlers := handler.New(services, log)
-	router := NewRouter(handlers, cfg.Docs.Enabled, services.Auth, log)
+
+	apiLimiter, err := ratelimit.NewLimiter(
+		cfg.RateLimit.Interval,
+		cfg.RateLimit.Burst,
+		cfg.RateLimit.MaxEntries,
+	)
+	if err != nil {
+		dbErr := db.Close()
+		redisError := redisClient.Close()
+		return nil, errors.Join(fmt.Errorf("init rate limiter: %w", err), dbErr, redisError)
+	}
+	loginLimiter, err := ratelimit.NewLimiter(
+		cfg.Auth.LoginLimit.Interval,
+		cfg.Auth.LoginLimit.Burst,
+		cfg.Auth.LoginLimit.MaxEntries,
+	)
+	if err != nil {
+		dbErr := db.Close()
+		redisError := redisClient.Close()
+		return nil, errors.Join(fmt.Errorf("init login rate limiter: %w", err), dbErr, redisError)
+	}
+	registerLimiter, err := ratelimit.NewLimiter(
+		cfg.Auth.RegisterLimit.Interval,
+		cfg.Auth.RegisterLimit.Burst,
+		cfg.Auth.RegisterLimit.MaxEntries,
+	)
+	if err != nil {
+		dbErr := db.Close()
+		redisError := redisClient.Close()
+		return nil, errors.Join(fmt.Errorf("init registr rate limiter: %w", err), dbErr, redisError)
+	}
+	router := NewRouter(
+		handlers,
+		cfg.Docs.Enabled,
+		services.Auth,
+		apiLimiter,
+		loginLimiter,
+		registerLimiter,
+		log,
+	)
 
 	a := &App{
 		server: &http.Server{

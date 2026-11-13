@@ -48,6 +48,8 @@ func NewTaskHandler(s TaskService, log *slog.Logger) *TaskHandler {
 // @Failure 403 {object} errorResponse
 // @Failure 413 {object} errorResponse
 // @Failure 500 {object} errorResponse
+// @Failure 429 {object} errorResponse "Превышен лимит запросов"
+// @Header 429 {integer} Retry-After "Время ожидания перед повторной попыткой в секундах, минимум 1"
 // @Router /tasks [post]
 func (h *TaskHandler) Create(w http.ResponseWriter, r *http.Request) {
 	userID, ok := UserIDFromContext(r.Context())
@@ -96,6 +98,8 @@ func (h *TaskHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Failure 401 {object} errorResponse
 // @Failure 403 {object} errorResponse
 // @Failure 500 {object} errorResponse
+// @Failure 429 {object} errorResponse "Превышен лимит запросов"
+// @Header 429 {integer} Retry-After "Время ожидания перед повторной попыткой в секундах, минимум 1"
 // @Router /tasks [get]
 func (h *TaskHandler) List(w http.ResponseWriter, r *http.Request) {
 	userID, ok := UserIDFromContext(r.Context())
@@ -189,6 +193,8 @@ func (h *TaskHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Failure 409 {object} errorResponse
 // @Failure 413 {object} errorResponse
 // @Failure 500 {object} errorResponse
+// @Failure 429 {object} errorResponse "Превышен лимит запросов"
+// @Header 429 {integer} Retry-After "Время ожидания перед повторной попыткой в секундах, минимум 1"
 // @Router /tasks/{id} [put]
 func (h *TaskHandler) Update(w http.ResponseWriter, r *http.Request) {
 	actorID, ok := UserIDFromContext(r.Context())
@@ -249,6 +255,8 @@ func (h *TaskHandler) Update(w http.ResponseWriter, r *http.Request) {
 // @Failure 403 {object} errorResponse
 // @Failure 404 {object} errorResponse
 // @Failure 500 {object} errorResponse
+// @Failure 429 {object} errorResponse "Превышен лимит запросов"
+// @Header 429 {integer} Retry-After "Время ожидания перед повторной попыткой в секундах, минимум 1"
 // @Router /tasks/{id}/history [get]
 func (h *TaskHandler) History(w http.ResponseWriter, r *http.Request) {
 	userID, ok := UserIDFromContext(r.Context())
@@ -321,6 +329,8 @@ func (h *TaskHandler) History(w http.ResponseWriter, r *http.Request) {
 // @Failure 404 {object} errorResponse
 // @Failure 413 {object} errorResponse
 // @Failure 500 {object} errorResponse
+// @Failure 429 {object} errorResponse "Превышен лимит запросов"
+// @Header 429 {integer} Retry-After "Время ожидания перед повторной попыткой в секундах, минимум 1"
 // @Router /tasks/{id}/comments [post]
 func (h *TaskHandler) AddComment(w http.ResponseWriter, r *http.Request) {
 	userID, ok := UserIDFromContext(r.Context())
@@ -373,6 +383,8 @@ func (h *TaskHandler) AddComment(w http.ResponseWriter, r *http.Request) {
 // @Failure 403 {object} errorResponse
 // @Failure 404 {object} errorResponse
 // @Failure 500 {object} errorResponse
+// @Failure 429 {object} errorResponse "Превышен лимит запросов"
+// @Header 429 {integer} Retry-After "Время ожидания перед повторной попыткой в секундах, минимум 1"
 // @Router /tasks/{id}/comments [get]
 func (h *TaskHandler) Comments(w http.ResponseWriter, r *http.Request) {
 	userID, ok := UserIDFromContext(r.Context())
