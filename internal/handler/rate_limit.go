@@ -33,7 +33,6 @@ func RateLimitMiddleware(limiter RequestLimiter, log *slog.Logger) func(http.Han
 			if err := writeErrorResponse(w, http.StatusTooManyRequests, "too many requests"); err != nil {
 				log.Error("Failed to write RateLimitMiddleware response", "error", err)
 			}
-			return
 		})
 	}
 }
