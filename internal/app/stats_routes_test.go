@@ -61,7 +61,7 @@ func TestStatsRouteSuccess(t *testing.T) {
 	h := handler.New(&service.Service{Auth: parser}, log)
 	h.Stats = handler.NewStatsHandler(svc, log)
 
-	router := app.NewRouter(h, false, parser, log)
+	router := app.NewRouter(h, false, parser, allowAllRateLimiter{}, allowAllRateLimiter{}, allowAllRateLimiter{}, log)
 
 	token, err := jwt.NewWithClaims(
 		jwt.SigningMethodHS256,
@@ -123,7 +123,7 @@ func TestStatsRouteRejectedRequests(t *testing.T) {
 			})
 			h := handler.New(&service.Service{Auth: parser}, log)
 			h.Stats = handler.NewStatsHandler(svc, log)
-			router := app.NewRouter(h, false, parser, log)
+			router := app.NewRouter(h, false, parser, allowAllRateLimiter{}, allowAllRateLimiter{}, allowAllRateLimiter{}, log)
 
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/teams/"+tt.teamID+"/stats", nil)
 			if tt.token {

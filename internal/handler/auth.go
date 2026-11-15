@@ -38,6 +38,8 @@ func NewAuthHandler(s AuthService, log *slog.Logger) *AuthHandler {
 // @Failure 409 {object} errorResponse
 // @Failure 413 {object} errorResponse
 // @Failure 500 {object} errorResponse
+// @Failure 429 {object} errorResponse "Превышен лимит запросов"
+// @Header 429 {integer} Retry-After "Время ожидания перед повторной попыткой в секундах, минимум 1"
 // @Router /register [post]
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var rawUser RegisterRequest
@@ -77,6 +79,8 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 // @Failure 401 {object} errorResponse
 // @Failure 413 {object} errorResponse
 // @Failure 500 {object} errorResponse
+// @Failure 429 {object} errorResponse "Превышен лимит запросов"
+// @Header 429 {integer} Retry-After "Время ожидания перед повторной попыткой в секундах, минимум 1"
 // @Router /login [post]
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var rawUser LoginRequest

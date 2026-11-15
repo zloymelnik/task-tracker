@@ -39,6 +39,8 @@ func NewStatsHandler(s StatsService, log *slog.Logger) *StatsHandler {
 // @Failure 401 {object} errorResponse
 // @Failure 403 {object} errorResponse
 // @Failure 500 {object} errorResponse
+// @Failure 429 {object} errorResponse "Превышен лимит запросов"
+// @Header 429 {integer} Retry-After "Время ожидания перед повторной попыткой в секундах, минимум 1"
 // @Router /teams/{team_id}/stats [get]
 func (h *StatsHandler) Get(w http.ResponseWriter, r *http.Request) {
 	userID, ok := UserIDFromContext(r.Context())

@@ -12,15 +12,27 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
 
-func NewRouter(h *handler.Handler, isDocsEnabled bool, parser handler.TokenParser, log *slog.Logger) http.Handler {
+func NewRouter(
+	h *handler.Handler,
+	isDocsEnabled bool,
+	parser handler.TokenParser,
+	apiLimiter handler.RequestLimiter,
+	loginLimiter handler.RequestLimiter,
+	registerLimiter handler.RequestLimiter,
+	log *slog.Logger,
+) http.Handler {
 	r := chi.NewRouter()
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(middleware.RequestID)
 		r.Use(handler.Logger(log))
 		r.Use(handler.Recovery(log))
+		r.Use(handler.RateLimitMiddleware(apiLimiter, log))
+
 		r.Get("/health", h.Health.Health)
-		r.Post("/register", h.Auth.Register)
-		r.Post("/login", h.Auth.Login)
+
+		r.With(handler.RateLimitMiddleware(registerLimiter, log)).Post("/register", h.Auth.Register)
+		r.With(handler.RateLimitMiddleware(loginLimiter, log)).Post("/login", h.Auth.Login)
+
 		r.Group(func(r chi.Router) {
 			r.Use(handler.AuthMiddleware(parser, log))
 			r.Post("/teams", h.Team.Create)

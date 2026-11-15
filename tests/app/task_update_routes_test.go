@@ -76,7 +76,7 @@ func TestUpdateTaskRoute(t *testing.T) {
 			})
 			h := handler.New(&service.Service{Auth: parser}, log)
 			h.Task = handler.NewTaskHandler(s, log)
-			router := app.NewRouter(h, false, parser, log)
+			router := app.NewRouter(h, false, parser, allowAllRateLimiter{}, allowAllRateLimiter{}, allowAllRateLimiter{}, log)
 			method, path, body := http.MethodPut, "/api/v1/tasks/"+taskID.String(), `{"version":4,"assignee_id":null}`
 			if tt.name == "invalid ID" {
 				path = "/api/v1/tasks/invalid"

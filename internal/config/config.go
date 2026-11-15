@@ -20,12 +20,13 @@ const (
 // environment variables. Secrets (passwords, tokens) are ENV-only: their
 // yaml tag is "-" so they can never be committed in plain text.
 type Config struct {
-	Env    string `yaml:"env" env:"ENV" env-default:"local"`
-	Server Server `yaml:"server"`
-	DB     DB     `yaml:"mysql"`
-	Auth   Auth   `yaml:"auth"`
-	Redis  Redis  `yaml:"redis"`
-	Docs   Docs   `yaml:"docs"`
+	Env       string    `yaml:"env" env:"ENV" env-default:"local"`
+	Server    Server    `yaml:"server"`
+	DB        DB        `yaml:"mysql"`
+	Auth      Auth      `yaml:"auth"`
+	Redis     Redis     `yaml:"redis"`
+	Docs      Docs      `yaml:"docs"`
+	RateLimit RateLimit `yaml:"rate_limit"    env-prefix:"RATE_LIMIT_"`
 }
 
 // Server holds HTTP server tuning parameters.
@@ -64,8 +65,10 @@ type DBRetry struct {
 
 // Auth holds authorization parameters.
 type Auth struct {
-	JWTSecret string        `yaml:"-"       env:"JWT_SECRET"`
-	JWTTtl    time.Duration `yaml:"jwt_ttl" env:"JWT_TTL"`
+	JWTSecret     string        `yaml:"-"              env:"JWT_SECRET"`
+	JWTTtl        time.Duration `yaml:"jwt_ttl"        env:"JWT_TTL"`
+	LoginLimit    RateLimit     `yaml:"login_limit"    env-prefix:"AUTH_LOGIN_"`
+	RegisterLimit RateLimit     `yaml:"register_limit" env-prefix:"AUTH_REGISTER_"`
 }
 
 // Redis holds redis parameters.
@@ -86,8 +89,16 @@ type RedisRetry struct {
 	Delay       time.Duration `yaml:"delay"        env:"REDIS_RETRY_DELAY"`
 }
 
+// Docs holds the ability to display swaggert for API.
 type Docs struct {
 	Enabled bool `yaml:"enabled" env:"DOCS_ENABLED"`
+}
+
+// RateLimit holds the settings for rate limiter.
+type RateLimit struct {
+	Interval   time.Duration `yaml:"interval"    env:"INTERVAL"`
+	Burst      int           `yaml:"burst"       env:"BURST"`
+	MaxEntries int           `yaml:"max_entries" env:"MAX_ENTRIES"`
 }
 
 func LoadConfig(path string) (*Config, error) {
@@ -124,6 +135,9 @@ func (c *Config) isValid() error {
 	}
 	if err := c.Redis.isValid(); err != nil {
 		return fmt.Errorf("wrong redis settings: %w", err)
+	}
+	if err := c.RateLimit.isValid(); err != nil {
+		return fmt.Errorf("wrong RateLimit settings: %w", err)
 	}
 	return nil
 }
@@ -188,6 +202,12 @@ func (a *Auth) isValid() error {
 	if a.JWTTtl <= 0 {
 		return fmt.Errorf("wrong jwt ttl")
 	}
+	if err := a.LoginLimit.isValid(); err != nil {
+		return fmt.Errorf("wrong login limit: %w", err)
+	}
+	if err := a.RegisterLimit.isValid(); err != nil {
+		return fmt.Errorf("wrong register limit: %w", err)
+	}
 	return nil
 }
 
@@ -215,6 +235,19 @@ func (r *Redis) isValid() error {
 	}
 	if r.Retry.Delay <= 0 {
 		return fmt.Errorf("wrong Redis delay")
+	}
+	return nil
+}
+
+func (r *RateLimit) isValid() error {
+	if r.Interval <= 0 {
+		return fmt.Errorf("wrong RateLimit Interval")
+	}
+	if r.Burst <= 0 {
+		return fmt.Errorf("wrong RateLimit Burst")
+	}
+	if r.MaxEntries <= 0 {
+		return fmt.Errorf("wrong RateLimit MaxEntries")
 	}
 	return nil
 }
